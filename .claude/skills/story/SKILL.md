@@ -55,7 +55,20 @@ From `$ARGUMENTS`, derive:
   - `Always:` — the invariants from PRD §3 that this story must preserve.
   - `Block If:` — the failure conditions that must never be true on merge.
   - `Never:` — explicit exclusions relevant to this story.
+- **Dependencies (BLOCKING — see below):**
+  - `Data model:` — for every PRD §3 resource the story touches, list the table(s) involved and their status. Statuses: `exists (see alembic/versions/<file>.py)`, `new migration required — adds <what>`, or `column added — <col> to <table>`. If the story is create-only for a resource whose table already exists in `alembic/versions/`, cite the exact migration file. Never write "TBD" or leave blank.
+  - `Domain entities & value objects:` — list each aggregate/value object in `app/domain/` the story reads or mutates. Mark each as `exists` or `new`.
+  - `Application use cases:` — list every use case class under `app/application/` this story adds or modifies (this is a preview of the "Use Cases" section below).
+  - `Infrastructure:` — env vars needed (`DATABASE_URL`, `CORS_ORIGINS`, etc.), external services (none in v1), and any repository ports the story requires.
+  - `Story blockers:` — GitHub issue numbers that must be merged before this story is buildable. `none` is a valid value only if you have verified it.
+- **Use Cases:** enumerate every application-layer use case (a class under `app/application/`) the story introduces or modifies. Each entry: name + one-line behavior + inputs → outputs + failure modes it must surface. Even a "trivial" endpoint has one use case; do not skip.
 - **Scenarios:** at least three Gherkin scenarios — one happy path, one edge / boundary, one error case. Concurrency scenarios are required if the story touches inventory, reservations, or any resource with a `reserved`/`available` invariant.
+- **Test Matrix (BLOCKING):** for each Gherkin scenario, name the layer(s) it will be tested at (`unit`, `integration`, `e2e`) and one candidate test name. Rules:
+  - Every pure-logic scenario ⇒ at least one `unit` test.
+  - Every scenario that names concurrency, a DB constraint, a transaction boundary, or `SELECT ... FOR UPDATE` ⇒ at least one `integration` test (real Postgres via testcontainers).
+  - Every scenario that names an HTTP status code, header, or wire format ⇒ at least one `e2e` test.
+
+**Dependencies grounding rule.** Every entry under `Dependencies.Data model:` must be verifiable at the current commit: either the table exists in `alembic/versions/` and you cite the file, or the story adds a new migration and names the verb (`add_column`, `create_table`, `add_check_constraint`). If you cannot map a resource in the story to a concrete migration path, stop and ask the user to clarify the schema shape. Do not proceed with a placeholder.
 
 ### 3. Render the issue body
 
@@ -67,6 +80,36 @@ Use exactly this structure. Every section must be filled; empty sections signal 
 **As a** <role>
 **I want** <goal>
 **So that** <benefit>
+
+## Dependencies
+
+**Data model:**
+- `<table>` — <exists (alembic/versions/<file>.py) | new migration required: <verb> <what> | column added: <col> to <table>>
+- <one bullet per table this story reads or writes>
+
+**Domain entities & value objects:**
+- `<AggregateOrValueObject>` — <exists | new> — <file path under app/domain/>
+
+**Application use cases:**
+- `<UseCaseName>` — <exists | new> — <one-line behavior>
+
+**Infrastructure:**
+- Env vars: <e.g. DATABASE_URL, CORS_ORIGINS, or "none new">
+- External services: <none in v1 unless the story explicitly requires one>
+- Repository ports: <e.g. InventoryRepository (exists), ProductRepository (new)>
+
+**Story blockers:**
+- <#issue-number — one-line why, or "none">
+
+## Use Cases
+
+<one entry per application-layer use case this story introduces or modifies>
+
+### `<UseCaseName>`
+- **Behavior:** <one sentence>
+- **Inputs:** <named fields + types, drawn from the PRD>
+- **Outputs:** <domain entity returned or event surfaced>
+- **Failure modes:** <DomainError subclass names — e.g. SkuConflict, InsufficientStock — one per line>
 
 ## Constraints
 
@@ -93,13 +136,30 @@ Scenario: <error handling — short name>
   Then  <error surfaced with problem+json, no state corruption>
 ```
 
+## Test Matrix
+
+| Scenario | Layer(s) | Candidate test name |
+|---|---|---|
+| <happy path name> | unit / integration / e2e | `tests/<layer>/.../test_<verb>_<subject>.py::test_<behavior>` |
+| <edge case name> | ... | ... |
+| <error handling name> | ... | ... |
+
+Rules the Dev subagent enforces from this matrix:
+- Every row must have at least one layer.
+- Any row that mentions concurrency, a DB constraint, a transaction, or `SELECT ... FOR UPDATE` in its Gherkin ⇒ `integration` is required.
+- Any row that mentions an HTTP status code, response header, or wire format ⇒ `e2e` is required.
+
 ## Definition of Done
 
 - [ ] All AC scenarios pass in CI (unit + integration where the story implies concurrency, DB constraints, or transactions)
-- [ ] No new ruff, ruff-format, or mypy violations
+- [ ] Every row in the Test Matrix has at least one passing test at each named layer
+- [ ] Every table under `Dependencies.Data model` exists at HEAD — either already present in `alembic/versions/`, or a new migration was added in this branch
+- [ ] `uv run alembic upgrade head` completes cleanly on a fresh Postgres (verified by the integration testcontainer)
+- [ ] `uv run alembic downgrade base && uv run alembic upgrade head` is reversible (or the migration file documents why not)
 - [ ] `scripts/check_layers.sh` passes (no framework imports in `app/domain/`)
+- [ ] No new ruff, ruff-format, or mypy violations
 - [ ] PR body references this issue with `Closes #<n>`
-- [ ] Alembic migration added if any schema change (with `CHECK` constraints)
+- [ ] Alembic migration added if any schema change (with `CHECK` constraints where PRD §3 requires them)
 - [ ] CHANGELOG entry under `[Unreleased]`
 - [ ] Coverage remains at or above the floor in BEST_PRACTICES §4
 
@@ -110,6 +170,7 @@ Scenario: <error handling — short name>
 ## Context
 
 - Related PRD sections: <§ numbers, e.g., §3 /inventory, §4 Story 1>
+- Related ARCHITECTURE sections: <e.g. §2 layer tree, §4 transaction boundary, §5 endpoint row>
 - Related invariants (from PRD §3):
   - <invariant 1>
   - <invariant 2>
@@ -192,8 +253,12 @@ Next:  /build <n>
 ## Behavioral rules
 
 - **Ground every field in the PRD.** If a Constraint or invariant is not in `docs/PRD.md`, either you are wrong or the PRD is out of date. In the latter case, add this line to the Definition of Done: `- [ ] Propose PRD update: <describe the missing invariant>`. Do not silently invent invariants.
+- **Dependencies is BLOCKING.** If the story touches any resource named in PRD §3 (`/products`, `/inventory`, `/orders`, `/customers`) and the rendered `## Dependencies` section leaves `Data model:` empty, or writes "TBD" / "N/A" / an unspecific value, stop before calling `mcp__github__create_issue`. Print `Dependencies incomplete: <what is missing>` and exit 1. The Dev subagent contract depends on this section being complete; a blank Dependencies is not a story, it is a wish.
+- **Cite migrations by path.** When a table under `Dependencies.Data model` is marked `exists`, cite the exact file (`alembic/versions/<file>.py`). Do this by scanning `alembic/versions/` before rendering; do not guess. If no file creates the table you claim exists, either the table is genuinely new (adjust the entry to `new migration required`) or the story is grounded incorrectly (stop and re-read the PRD).
+- **Use Cases must exist.** Every story produces at least one entry under `## Use Cases`. A story that seems to have "no use case" is either a refactor (which should not go through `/story`) or a UI-only change (out of scope for v1). Stop and ask.
+- **Test Matrix must cover every scenario.** If any Gherkin scenario is missing a corresponding row in the Test Matrix, stop and complete the matrix before rendering. Concurrency/DB-constraint/transaction scenarios must have `integration` in their layers cell; HTTP-status/header/wire-format scenarios must have `e2e`.
 - **No mixed concerns.** A story that touches two aggregates (e.g., orders + customers) is fine; a story that describes two independent behaviors is not.
-- **No implementation details.** The story describes behavior, not code paths. Do not name classes, files, or SQL. Those decisions belong to the Dev subagent under the Architecture doc.
+- **No implementation details.** The story describes behavior, not code paths. Do not name classes, files, or SQL in `## Story` / `## Acceptance Criteria`. Naming *aggregates and use cases* in `## Dependencies` and `## Use Cases` is expected and correct — that is what makes those sections load-bearing for the Dev subagent.
 - **No `bug` label from this skill.** Bugs use a separate `/bug` skill (not yet built). A `/story` invocation always produces a feature story.
 - **Never edit or close existing issues.** This skill is create-only.
 - **Never push to the repo or create branches.** That is `/build`'s job.
@@ -206,6 +271,9 @@ Next:  /build <n>
 | Missing env var | Print which one, exit 1. |
 | `gh auth status` fails | Print instruction, exit 1. |
 | Duplicate story detected | Ask user before proceeding. |
+| `Dependencies.Data model` empty or vague on a PRD §3 story | Print `Dependencies incomplete: <what>`, exit 1. No issue created. |
+| Cited migration file does not exist under `alembic/versions/` | Print `Cited migration not found: <path>. Either the table is new or the story is wrong.`, exit 1. |
+| Any Gherkin scenario missing from the Test Matrix | Print `Test Matrix incomplete: <scenario name>`, exit 1. |
 | `mcp__github__create_issue` fails | Print error, exit 1. No Projects call. |
 | `addProjectV2ItemById` fails | Issue exists but not on board. Print manual fixup query. Do not delete the issue. |
 | Status mutation fails | Item exists on board with default status. Print manual fixup query. |

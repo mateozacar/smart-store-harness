@@ -6,10 +6,14 @@ services:
     plan: starter
     branch: develop
     buildCommand: pip install uv && uv sync --frozen
-    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # NOTE: alembic upgrade head runs on every start. It is idempotent, so
+    # repeated cold-starts are safe. This lives in startCommand rather than
+    # preDeployCommand because Render's Starter plan does not execute
+    # preDeployCommand. Move it back to preDeployCommand if the service is
+    # upgraded to Standard or higher.
+    startCommand: uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     autoDeployTrigger: commit
-    preDeployCommand: uv run alembic upgrade head
     envVars:
       - key: UV_PYTHON_DOWNLOADS
         value: manual

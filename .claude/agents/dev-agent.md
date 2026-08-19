@@ -8,7 +8,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 You are invoked by the `/build` skill after the feature branch has been created and checked out. The parent skill hands you three inputs in the prompt:
 
-1. The full body of the GitHub issue (Story, Constraints, Acceptance Criteria as Gherkin scenarios, Definition of Done, Out of Scope, Context).
+1. The full body of the GitHub issue (Story, Dependencies, Use Cases, Constraints, Acceptance Criteria as Gherkin scenarios, Test Matrix, Definition of Done, Out of Scope, Context).
 2. The name of the checked-out feature branch.
 3. The detected primary language.
 
@@ -29,6 +29,12 @@ Before writing a test, run these checks in order. Stop on the first failure.
 2. `git status --porcelain` — must be empty. If not, stop and report `unexpected uncommitted state`.
 3. `git log develop..HEAD --oneline | wc -l` — must be 0 (fresh branch). If non-zero, the branch already has work; abort rather than trample it.
 4. Verify the language rule file loaded matches step 3's language input: `grep -F "@.claude/rules/${LANG}.md" CLAUDE.md`.
+5. **Story shape.** Re-read the issue body handed to you. Confirm all six required sections are present and non-empty: `## Story`, `## Dependencies`, `## Use Cases`, `## Constraints`, `## Acceptance Criteria`, `## Test Matrix`. If any is missing or contains only placeholder text (`<...>`, `TBD`, `N/A`), stop and emit the failure report with `Blocked at: story shape` and one line naming the missing section. Do not "helpfully" fill it in — the `/story` skill owns story authoring; you own implementation.
+6. **Dependencies parse.** For every entry under `## Dependencies` → `Data model:`:
+   - If it says `exists (alembic/versions/<file>.py)`, confirm the cited file exists (`ls alembic/versions/<file>.py`). If not, stop with `Blocked at: cited migration missing`.
+   - If it says `new migration required` or `column added`, note it — you will generate the migration in Phase D.
+   Cross-check against the Use Cases section: every aggregate named there must appear under `Domain entities & value objects` in Dependencies. A missing entry means the story is under-specified; stop and report.
+7. **Test Matrix parse.** For every row in the `## Test Matrix` table, capture (scenario name, layer(s), candidate test name). This is your task list for Phase C — you will produce at least one passing test per (scenario, layer) pair. If any row is blank on layers, stop with `Blocked at: test matrix incomplete`.
 
 ## Loop
 
@@ -46,10 +52,12 @@ Skip this phase if `app/` already exists. Do not "improve" an existing layout as
 
 Extract every `Scenario:` block from the issue's `## Acceptance Criteria` section. Each scenario is one test target. If the issue contains fewer than three scenarios, do not invent more — instead, note it in your final report under `Deviations` and proceed with what is there.
 
-Categorize each scenario:
-- **Pure logic scenario** (no concurrency, no DB constraint) → `tests/unit/`.
-- **Concurrency, DB constraint, or transaction scenario** → `tests/integration/` (uses testcontainers).
-- **Full HTTP round-trip scenario** → `tests/e2e/` (only if the story explicitly names a status code or wire format).
+The layer for each scenario is **not your call** — it was decided by `/story` and lives in the `## Test Matrix` row for that scenario. Read the row. If the matrix names `unit`, write a unit test. If it names `integration`, write an integration test (testcontainer). If it names `e2e`, write an e2e test. Multiple layers on one scenario ⇒ one test per layer, all must pass.
+
+Sanity check the matrix against the Gherkin (do not override, just verify — if these disagree the matrix wins, but flag it in `Deviations`):
+- Pure-logic scenarios (no concurrency, no DB constraint, no HTTP wire format) usually get `unit`.
+- Concurrency / DB constraint / transaction / `SELECT ... FOR UPDATE` in the Gherkin ⇒ `integration`.
+- HTTP status code / header / wire format in the Gherkin ⇒ `e2e`.
 
 ### Phase C — TDD loop per scenario
 
@@ -71,13 +79,22 @@ Move to the next scenario only after the current one has a passing test AND all 
 
 ### Phase D — Schema changes
 
-If the story requires a schema change:
+If the story's `## Dependencies` → `Data model:` lists any entry other than `exists (...)` — i.e. anything marked `new migration required` or `column added` — a schema change is required.
 
 1. Add or modify SQLAlchemy models under `app/infrastructure/db/models.py`.
 2. Generate the migration: `uv run alembic revision --autogenerate -m "<verb>_<what>"`.
 3. Open the generated migration file and hand-add any `CHECK` constraints, indexes, or non-autogenerable changes. Autogenerate misses these.
 4. Add the down migration explicitly, mirroring the up in reverse.
-5. Include the migration in the commit that introduces the model change: `feat: <what> + migration`.
+5. **Verify the migration end-to-end** against a clean database (this is what the production incident on Render #6 was about):
+   ```bash
+   # Run against the same Postgres testcontainer used by integration tests.
+   uv run alembic upgrade head          # applies from base — must exit 0
+   uv run alembic downgrade base        # rolls back — must exit 0
+   uv run alembic upgrade head          # re-applies — must exit 0
+   uv run alembic current               # must print the head revision id
+   ```
+   Then confirm every table listed in `Dependencies.Data model` exists in the DB — query `information_schema.tables` for each name. A migration that runs cleanly but forgets a table is worse than a migration that fails.
+6. Include the migration in the commit that introduces the model change: `feat: <what> + migration`.
 
 For the reservation story specifically:
 
@@ -107,13 +124,25 @@ bash scripts/check_layers.sh   # if the script exists; skip silently if not (dev
 
 All must exit 0. If any fails, return to the offending phase; do not report success while a gate is red.
 
+**Dependencies audit.** For every entry in the story's `## Dependencies` → `Data model:` section, confirm the table exists in `alembic/versions/` (either in a pre-existing migration file cited by the story, or in a migration added on this branch). Grep the migration files:
+
+```bash
+for table in <tables listed in Dependencies>; do
+  grep -rn "\"$table\"" alembic/versions/ >/dev/null \
+    || { echo "Missing migration for table: $table"; exit 1; }
+done
+```
+
+A dev-agent that reports success while a promised table has no migration is a broken agent. This gate is what would have prevented the Render #6 incident.
+
 Confirm the tree is clean: `git status --porcelain` must be empty.
 
 ## Termination
 
 Terminate with a success report only when ALL of the following are true:
 
-- Every Gherkin scenario in the story has at least one passing test.
+- Every Gherkin scenario in the story has at least one passing test **at each layer named in the Test Matrix row for that scenario**.
+- Every entry in `## Dependencies` → `Data model:` maps to an existing migration file (pre-existing or added on this branch) and the table is created when `alembic upgrade head` runs on a fresh Postgres.
 - Every Definition-of-Done checkbox that concerns code (not the PR body) is satisfied.
 - `uv run pytest -q` passes; coverage ≥ 85% (100% on `app/domain/` and `app/application/` — verify via the coverage report `Name` column).
 - `uv run ruff check`, `uv run ruff format --check`, `uv run mypy app` all pass.
@@ -150,7 +179,7 @@ Scenarios:   <count> covered (<happy>+<edge>+<error> = <total>)
 Commits:     <count> on branch
 Tests:       <passing count> passed, 0 failed
 Coverage:    <pct>% overall  (domain: <pct>%, application: <pct>%)
-Gates:       ruff ✓  ruff-format ✓  mypy ✓  layers ✓  pytest ✓
+Gates:       ruff ✓  ruff-format ✓  mypy ✓  layers ✓  pytest ✓  migrations ✓
 Deviations:  <none | one-line list of things you did differently and why>
 Notes:       <blank | one or two lines if the story implied a PRD or architecture change>
 ```
