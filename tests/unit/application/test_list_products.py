@@ -185,3 +185,21 @@ async def test_rejects_invalid_pagination_size_too_large() -> None:
 
     with pytest.raises(InvalidPaginationError):
         await use_case.execute(ListProductsQuery(page=1, size=101))
+
+
+async def test_rejects_invalid_pagination_size_zero() -> None:
+    """InvalidPaginationError raised when size < 1."""
+    uow = FakeUnitOfWork(FakeProductRepository([]))
+    use_case = ListProductsUseCase(uow)
+
+    with pytest.raises(InvalidPaginationError):
+        await use_case.execute(ListProductsQuery(page=1, size=0))
+
+
+async def test_rejects_negative_max_price() -> None:
+    """InvalidPriceRangeError raised when max_price is negative."""
+    uow = FakeUnitOfWork(FakeProductRepository([]))
+    use_case = ListProductsUseCase(uow)
+
+    with pytest.raises(InvalidPriceRangeError):
+        await use_case.execute(ListProductsQuery(page=1, size=20, max_price=Decimal("-5")))

@@ -25,7 +25,7 @@ class CreateProductRequest(BaseModel):
 
 
 class ProductResponse(BaseModel):
-    """Response body for product endpoints."""
+    """Response body for a single product."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -33,3 +33,14 @@ class ProductResponse(BaseModel):
     sku: str
     name: str
     price: str
+
+
+class ProductPageResponse(BaseModel):
+    """Response body for paginated product listing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ProductResponse]
+    total: int
+    page: int
+    size: int
