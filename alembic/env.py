@@ -6,6 +6,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from app.infrastructure.db.dsn import normalize_database_url
 
 # Import all models so autogenerate can detect them.
 from app.infrastructure.db.models import Base  # noqa: F401
@@ -17,7 +18,7 @@ if config.config_file_name is not None:
 
 # Allow DATABASE_URL env var to override alembic.ini (used in CI and production).
 if url := os.getenv("DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(url))
 
 target_metadata = Base.metadata
 
