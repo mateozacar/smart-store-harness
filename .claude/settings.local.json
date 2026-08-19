@@ -29,7 +29,11 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git checkout *)",
-      "Bash(git cherry-pick *)"
+      "Bash(git cherry-pick *)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)",
+      "Bash(uv run *)",
+      "Bash(bash *)"
     ]
   }
 }

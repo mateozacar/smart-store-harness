@@ -1,5 +1,7 @@
 """Unit tests for UnitOfWork protocol."""
 
+from typing import Any
+
 from app.application.unit_of_work import UnitOfWork
 
 
@@ -13,6 +15,8 @@ def test_unit_of_work_is_protocol() -> None:
 
 class FakeUoW:
     """Minimal fake that satisfies the UnitOfWork protocol."""
+
+    products: Any = None
 
     async def __aenter__(self) -> "FakeUoW":
         return self
