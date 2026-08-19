@@ -2,6 +2,8 @@
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.infrastructure.db.dsn import normalize_database_url
+
 
 class Settings(BaseSettings):
     """Runtime configuration loaded from environment variables."""
@@ -9,18 +11,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/smart_store"
-
-    @property
-    def async_database_url(self) -> str:
-        """Normalize the DATABASE_URL to always use the psycopg (v3) async driver."""
-        url = self.database_url
-        for old in ("postgresql://", "postgres://", "postgresql+psycopg2://"):
-            if url.startswith(old):
-                return url.replace(old, "postgresql+psycopg://", 1)
-        return url
     app_env: str = "development"
     log_level: str = "INFO"
     cors_origins: str = ""
+
+    @property
+    def async_database_url(self) -> str:
+        """Return the DATABASE_URL normalized to the psycopg v3 driver."""
+        return normalize_database_url(self.database_url)
 
 
 settings = Settings()
