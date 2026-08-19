@@ -15,7 +15,11 @@ allowed-tools:
 
 # /build — Implement an Issue End-to-End
 
-Argument (`$ARGUMENTS`): an integer GitHub issue number. If omitted, the skill reads `.claude/state/last-issue.txt` (written by the last `/story` invocation). If neither is available, the skill stops.
+Argument (`$ARGUMENTS`): an integer GitHub issue number, optionally followed by flags. If the issue number is omitted, the skill reads `.claude/state/last-issue.txt` (written by the last `/story` invocation). If neither is available, the skill stops.
+
+Flags:
+- `--dry-run` — perform detection + item lookup only; print `WOULD:` for every mutating step.
+- `--fast` — demo mode: (a) pre-warm `uv sync` + the testcontainer Postgres image in the background while the skill prepares the branch, (b) spawn the dev-agent **without** worktree isolation so it reuses the already-warm venv, and (c) replace the defense-in-depth gate re-run in step 10 with two cheap sanity checks (the dev-agent's Phase F already ran the identical gates). Never combine with parallel `/build` invocations — the no-worktree path assumes serial execution.
 
 You are the deterministic scaffolding around one story. The creative work — writing tests and code — is delegated to the `dev-agent` subagent in step 8. Your job is to *prepare, transition, verify, hand off, and finalize*. Do not write feature code yourself; that violates the separation of concerns and blows the demo timing.
 
@@ -35,11 +39,23 @@ Stop and report immediately if any check fails.
 
 ## Steps
 
-### 1. Resolve the issue number
+### 1. Resolve the issue number and parse flags
+
+Parse `--dry-run` and `--fast` regardless of position, then pick the first non-flag token as the issue number.
 
 ```bash
-if [ -n "$ARGUMENTS" ] && [ "$ARGUMENTS" != "--dry-run" ]; then
-  ISSUE_NUMBER=$(echo "$ARGUMENTS" | awk '{print $1}')
+DRY_RUN=0; FAST=0
+for tok in $ARGUMENTS; do
+  case "$tok" in
+    --dry-run) DRY_RUN=1 ;;
+    --fast)    FAST=1 ;;
+  esac
+done
+
+ISSUE_ARG=$(printf '%s\n' $ARGUMENTS | grep -Ev '^--(dry-run|fast)$' | head -n1)
+
+if [ -n "$ISSUE_ARG" ]; then
+  ISSUE_NUMBER="$ISSUE_ARG"
 elif [ -f .claude/state/last-issue.txt ]; then
   ISSUE_NUMBER=$(cat .claude/state/last-issue.txt)
 else
@@ -47,7 +63,16 @@ else
 fi
 ```
 
-If `--dry-run` is present anywhere in `$ARGUMENTS`, set `DRY_RUN=1`.
+**Pre-warm caches (only when `--fast` and `pyproject.toml` exists).** Fire non-blocking background jobs so the dev-agent's environment is warm by the time step 8 spawns it. Failures are ignored — pre-warm is a hint, not a gate.
+
+```bash
+if [ "$FAST" = "1" ] && [ -f pyproject.toml ] && [ "$DRY_RUN" = "0" ]; then
+  ( uv sync --frozen >/dev/null 2>&1 & ) 2>/dev/null || true
+  if command -v docker >/dev/null 2>&1; then
+    ( docker pull postgres:16-alpine >/dev/null 2>&1 & ) 2>/dev/null || true
+  fi
+fi
+```
 
 ### 2. Fetch the issue
 
@@ -162,7 +187,7 @@ The rewrite must land in the same commit as the story work, not in a separate cl
 Invoke the `dev-agent` subagent (definition: `.claude/agents/dev-agent.md`) via the Agent tool with:
 
 - `subagent_type: "dev-agent"`
-- `isolation: "worktree"` — the subagent works in an isolated git worktree so parallel `/build` invocations do not collide.
+- `isolation: "worktree"` **when `FAST=0`** — the subagent works in an isolated git worktree so parallel `/build` invocations do not collide. **Omit `isolation` when `FAST=1`**: demo runs are serial, and the fresh `uv sync` inside a new worktree costs 20-40s that a single-story run does not need to pay. Without the worktree, the subagent inherits the pre-warmed venv from step 1.
 - Prompt containing:
   1. The full issue body (verbatim).
   2. The branch name.
@@ -184,7 +209,7 @@ Parse the report format defined in `.claude/agents/dev-agent.md` ("Report format
 
 ### 10. Verify quality gates (defense in depth)
 
-Even if the subagent claims success, re-run every gate from the checked-out worktree:
+**When `FAST=0` (default):** re-run every gate from the checked-out worktree, even if the subagent claims success:
 
 ```bash
 uv run ruff check app tests
@@ -196,7 +221,14 @@ bash scripts/check_layers.sh
 
 Any non-zero exit → stop before push. Print which gate failed and its output. Status remains In Progress; branch is retained locally.
 
-**Migration verification.** Parse the `## Dependencies` → `Data model:` section from the issue body. For every table listed, grep `alembic/versions/` for a `create_table("<name>"` or `add_column("<name>"` reference. Missing ⇒ stop before push and print `Migration missing for table: <name>`. This is the gate that would have caught the Render #6 incident where `products` compiled and deployed without a migration referenced.
+**When `FAST=1` (demo mode):** the dev-agent already ran the identical commands in Phase F and would have emitted `Status: FAILED` if any gate went red. `/build` never reaches this step in that case (step 9 aborts). Skip the full re-run and use only these two cheap checks to catch the one failure mode `--fast` is exposed to — a subagent that reports success without doing the work:
+
+```bash
+[ -n "$(git log develop..HEAD --oneline)" ] || { echo "No commits on $BRANCH — subagent claimed success without doing work." >&2; exit 1; }
+[ -z "$(git status --porcelain)" ]           || { echo "Working tree dirty — subagent claimed success but left uncommitted files." >&2; git status >&2; exit 1; }
+```
+
+**Migration verification (both modes).** Parse the `## Dependencies` → `Data model:` section from the issue body. For every table listed, grep `alembic/versions/` for a `create_table("<name>"` or `add_column("<name>"` reference. Missing ⇒ stop before push and print `Migration missing for table: <name>`. This is the gate that would have caught the Render #6 incident where `products` compiled and deployed without a migration referenced. Cheap enough to run unconditionally.
 
 ### 11. Confirm all work is committed
 
@@ -294,7 +326,7 @@ Next:     Await Claude Code Review action; merge to develop when green.
 ## Behavioral rules
 
 - **Never write feature code inside this skill.** Scaffolding, git operations, MCP calls, GraphQL mutations only. All source edits happen inside the `dev-agent` subagent.
-- **Never push without passing quality gates.** Step 10 is defense in depth; even if the subagent lied, this skill will not.
+- **Never push without passing quality gates.** In default mode, step 10 is defense in depth; even if the subagent lied, this skill will not. In `--fast` mode the gate trust is delegated to the dev-agent's Phase F report — never disable the two sanity checks or the migration audit that remain.
 - **Never advance status past what actually happened.** If the PR failed to open, do not transition to In Review.
 - **Never rewrite history on the branch after push.** Use additive commits only. No `--force`, no `--amend`.
 - **Never bypass `gh issue develop`.** It is the only path that registers the branch↔issue link.
