@@ -17,6 +17,7 @@ class FakeUoW:
     """Minimal fake that satisfies the UnitOfWork protocol."""
 
     products: Any = None
+    customers: Any = None
 
     async def __aenter__(self) -> "FakeUoW":
         return self
