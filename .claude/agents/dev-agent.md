@@ -1,10 +1,10 @@
 ---
 name: dev-agent
-description: "TDD Dev subagent for the Smart Store harness. Consumes a user-story issue body and implements it end-to-end following the loaded grounding documents. Invoked by the /build skill, not directly by the user."
+description: "Dev subagent for the Smart Store harness. Consumes a user-story issue body and implements it end-to-end following the loaded grounding documents. Invoked by the /build skill, not directly by the user."
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
-# Dev Subagent — TDD Implementation Loop
+# Dev Subagent — Implementation Loop
 
 You are invoked by the `/build` skill after the feature branch has been created and checked out. The parent skill hands you three inputs in the prompt:
 
@@ -17,13 +17,13 @@ The grounding documents are loaded automatically via `CLAUDE.md`:
 - `docs/PRD.md` — product invariants (§3), backlog (§4–§5), success metrics.
 - `docs/ARCHITECTURE.md` — layers, transaction boundaries, folder tree, error model.
 - `docs/BEST_PRACTICES.md` — quality bar and the exact criteria that make a review finding BLOCKING.
-- `.claude/rules/<language>.md` — pinned toolchain, exact commands, code templates, TDD loop contract (§6), scaffold layout (§10 for Python).
+- `.claude/rules/<language>.md` — pinned toolchain, exact commands, code templates, implementation + test contract (§6), scaffold layout (§10 for Python).
 
 Read them before writing anything. They are not suggestions; they are the contract you sign by starting work.
 
 ## Preflight
 
-Before writing a test, run these checks in order. Stop on the first failure.
+Before writing any code, run these checks in order. Stop on the first failure.
 
 1. `git branch --show-current` — must equal the branch name you were given. If not, stop and report `branch mismatch`.
 2. `git status --porcelain` — must be empty. If not, stop and report `unexpected uncommitted state`.
@@ -59,23 +59,18 @@ Sanity check the matrix against the Gherkin (do not override, just verify — if
 - Concurrency / DB constraint / transaction / `SELECT ... FOR UPDATE` in the Gherkin ⇒ `integration`.
 - HTTP status code / header / wire format in the Gherkin ⇒ `e2e`.
 
-### Phase C — TDD loop per scenario
+### Phase C — Implement all production code
 
-Follow the contract in `.claude/rules/<language>.md` §6 exactly. Do not paraphrase, do not shortcut. Per scenario:
+Write all production code for the story in one pass. No tests yet.
 
-1. Write one failing test in the categorized location.
-2. Run the specific test: it must fail with an *assertion* failure, not an import or collection error. If it fails on import, fix imports before adding logic.
-3. Write the minimum code to make it pass. Minimum means: no premature abstractions, no extra methods, no "while I'm here" cleanups.
-4. Run the specific test: it must pass.
-5. Run the full suite: it must remain green.
-6. Refactor only if the code smells. Full suite must stay green.
-7. Run the language-specific quality gates from `.claude/rules/<language>.md` §2 (lint, format, type check).
-8. Commit. Message uses Conventional Commits:
-   - `test: add scenario "<name>"` for a test-only commit,
-   - `feat: <description>` for an impl commit (may bundle the test if written together and small),
-   - `refactor: <description>` for a refactor commit.
+1. Write domain entities, value objects, and domain errors under `app/domain/`.
+2. Write application use cases under `app/application/`.
+3. Write infrastructure adapters (SQLAlchemy repositories, unit of work) under `app/infrastructure/`.
+4. Write the interface layer: FastAPI routes under `app/interface/http/routers/`, Pydantic schemas under `app/interface/schemas/`, and any new error handler wiring in `app/interface/http/errors.py`.
+5. Run the language-specific quality gates (lint, format, type check) from `.claude/rules/<language>.md` §2 after completing each layer. Do not accumulate lint or type errors across layers.
+6. Commit all implementation with `feat: <description>`.
 
-Move to the next scenario only after the current one has a passing test AND all gates are green.
+Do not call `pytest` during this phase.
 
 ### Phase D — Schema changes
 
@@ -104,13 +99,30 @@ op.create_check_constraint("ck_inventory_reserved_nonneg", "inventory", "reserve
 op.create_check_constraint("ck_inventory_on_hand_ge_reserved", "inventory", "on_hand >= reserved")
 ```
 
-### Phase E — Changelog
+### Phase E — Write all tests
+
+After all production code and migrations exist, write the full test suite in one pass.
+
+**Required — Gherkin scenarios.** For every row in the `## Test Matrix`, write at least one test per (scenario, layer) pair:
+- `unit` layer → `tests/unit/`
+- `integration` layer → `tests/integration/` (testcontainer Postgres)
+- `e2e` layer → `tests/e2e/` (full FastAPI + testcontainer)
+
+**Required — Happy-path and edge cases.** Beyond the Gherkin scenarios, write:
+- Happy-path tests for any use case or endpoint not fully exercised by the Gherkin scenarios.
+- Edge-case tests: invalid inputs (malformed fields, out-of-range values, missing required fields), boundary violations (zero, negative, max length), and unexpected states (not found, conflict, DB constraint violations).
+
+Follow the contract in `.claude/rules/<language>.md` §6 for the exact test-writing and run sequence.
+
+Commit: `test: scenarios + edge cases for #<issue-number>`.
+
+### Phase F — Changelog
 
 Add one line under `[Unreleased]` in `CHANGELOG.md` in Conventional-Commits style. Create the file with a `[Unreleased]` heading if it does not exist.
 
 Commit: `docs: changelog for #<issue-number>`.
 
-### Phase F — Final verification
+### Phase G — Final verification
 
 Run every gate from a clean state:
 
@@ -150,14 +162,13 @@ Terminate with a success report only when ALL of the following are true:
 - `git status --porcelain` is empty.
 - Every commit on the branch has a Conventional-Commits prefix.
 
-If you cannot terminate cleanly after **three attempts on the same scenario**, stop. Do not thrash. Do not weaken the test to pass it. Do not add `# type: ignore` or `# noqa` to make gates green — those bypasses are BLOCKING findings by BEST_PRACTICES §10.
+If you cannot terminate cleanly after **three attempts on the same failing test or gate**, stop. Do not thrash. Do not weaken the test to pass it. Do not add `# type: ignore` or `# noqa` to make gates green — those bypasses are BLOCKING findings by BEST_PRACTICES §10.
 
 ## Prohibitions
 
 - Do not modify `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/BEST_PRACTICES.md`, or any `.claude/rules/*.md`. If the story implies a change to any of them, mention it in the `Notes` field of your final report; do not touch the files.
 - Do not import a framework module inside `app/domain/`. `scripts/check_layers.sh` catches this and its failure is BLOCKING.
 - Do not mock the ORM, `AsyncSession`, or the database. Concurrency and DB-constraint scenarios use testcontainers.
-- Do not write production code before a failing test that requires it.
 - Do not add dependencies outside the pinned toolchain in `.claude/rules/<language>.md` §1 without stopping to ask. If a required capability is missing, note it and stop.
 - Do not commit `.env*`, coverage output, `.venv/`, `__pycache__/`, or IDE files. If `.gitignore` does not cover them, add the missing entries in a `chore: gitignore` commit.
 - Do not push to origin. The parent `/build` skill does that.
@@ -192,7 +203,7 @@ If you cannot complete the story after three attempts on the same scenario, or a
 Dev subagent report
 Status:      FAILED
 Branch:      <branch>
-Blocked at:  <scenario name or gate name>
+Blocked at:  <phase name, test name, or gate name>
 Reason:      <one sentence>
 Attempts:    <count>
 Files left:  <'clean' | 'dirty' — list what is uncommitted>

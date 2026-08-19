@@ -13,5 +13,5 @@ Language-specific enforcement rules are loaded by the `/build` skill based on th
 ## Non-negotiables
 - Never modify PRD, ARCHITECTURE, or BEST_PRACTICES without an explicit user instruction. These are contracts, not scratchpads.
 - Never introduce a framework import inside `app/domain/`.
-- Never write production code before a failing test exists (TDD is enforced, not encouraged).
+- Tests must cover every Gherkin scenario plus happy-path and edge cases; they are written after implementation is complete, not interleaved with it.
 - Never bypass the reservation transaction boundary described in ARCHITECTURE §4.

@@ -394,20 +394,41 @@ async def pg_session_factory(postgres_container):
 
 Container is session-scoped (starts once per test run). Migrations run against it at startup.
 
-## 6. TDD Loop Contract
+## 6. Implementation + Test Contract
 
-For each Gherkin scenario in the story, the subagent runs this loop exactly:
+The subagent writes all production code first, then writes all tests in a single pass at the end.
 
-1. Write one failing test in `tests/unit/` (or `tests/integration/` if the scenario names concurrency, DB constraints, or transactions).
-2. `uv run pytest <test-file>::<test-name> -x` — must fail with the *expected* assertion, not an import or collection error. If it fails on import, fix imports first without adding logic.
-3. Write the minimum code to pass.
-4. `uv run pytest <test-file>::<test-name> -x` — must pass.
-5. `uv run pytest -x -q` — full suite still green.
-6. Refactor if the code smells. Re-run step 5.
-7. `uv run ruff check app tests && uv run ruff format app tests && uv run mypy app` — all clean.
-8. Commit with `test:` or `feat:` prefix (Conventional Commits).
+**Phase 1 — Implement all production code (no pytest calls)**
 
-The loop terminates when every scenario in the story is covered by a passing test.
+1. Write domain entities, value objects, and domain errors.
+2. Write application use cases.
+3. Write infrastructure adapters (repositories, unit of work, SQLAlchemy models).
+4. Write the interface layer (routes, schemas, error handler wiring).
+5. After each layer: `uv run ruff check app && uv run ruff format app && uv run mypy app` — must be clean before moving to the next layer.
+6. Commit: `feat: <description>`.
+
+**Phase 2 — Write all tests (after all code and migrations exist)**
+
+Write every required test in one pass, then run:
+
+1. Every Gherkin scenario at the layer(s) from the Test Matrix (mandatory, no exceptions).
+2. Happy-path tests for each use case / endpoint not already covered by the Gherkin scenarios.
+3. Edge-case tests: invalid inputs, boundary conditions, missing fields, conflict states.
+
+Layer placement:
+- `unit` → `tests/unit/` (pure Python, no I/O)
+- `integration` → `tests/integration/` (testcontainer Postgres)
+- `e2e` → `tests/e2e/` (full FastAPI + testcontainer via `httpx.AsyncClient`)
+
+After writing all tests:
+
+```bash
+uv run pytest -x -q                                              # stop on first failure; fix and re-run until green
+uv run pytest tests/ --cov=app --cov-report=term-missing        # full suite with coverage; must pass --cov-fail-under=85
+uv run ruff check app tests && uv run ruff format app tests && uv run mypy app
+```
+
+Commit: `test: scenarios + edge cases for #<issue-number>`.
 
 ## 7. Async Discipline
 
