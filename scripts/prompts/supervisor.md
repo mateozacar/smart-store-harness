@@ -55,6 +55,15 @@ Be specific: "the issue adds a new endpoint to orders" or "the issue only touche
 Create a worktree and launch **only** the agents that have work to do.
 Agents with no work are skipped entirely — do not create worktrees for them.
 
+Before creating any worktree, capture the CodeMie authentication variables from the current environment:
+
+```bash
+env | grep -E "^(CODEMIE_PROVIDER|CODEMIE_BASE_URL|CODEMIE_API_KEY)=" 2>/dev/null
+```
+
+Store those values — you will pass them to every `herdr agent start` call so each domain agent
+authenticates against CodeMie automatically.
+
 For each active agent:
 
 ```bash
@@ -65,7 +74,10 @@ herdr worktree create --branch feat/issue-<number>-<domain> --label "<Domain> Ag
 Parse `.result.root_pane.pane_id` from the JSON response.
 
 ```bash
-herdr agent start <domain>-agent --kind claude-code --pane <pane_id>
+herdr agent start <domain>-agent --kind claude-code --pane <pane_id> \
+  --env CODEMIE_PROVIDER="$CODEMIE_PROVIDER" \
+  --env CODEMIE_BASE_URL="$CODEMIE_BASE_URL" \
+  --env CODEMIE_API_KEY="$CODEMIE_API_KEY"
 ```
 
 ---
