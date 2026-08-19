@@ -2,15 +2,21 @@
 
 from typing import Protocol, runtime_checkable
 
+from app.domain.products.ports import ProductRepository
+
 
 @runtime_checkable
 class UnitOfWork(Protocol):
     """Defines the commit/rollback boundary used by application use cases."""
 
-    async def __aenter__(self) -> "UnitOfWork": ...
+    products: ProductRepository
 
-    async def __aexit__(self, *args: object) -> None: ...
+    async def __aenter__(self) -> "UnitOfWork": ...  # pragma: no cover
 
-    async def commit(self) -> None: ...
+    async def __aexit__(
+        self, exc_type: object, exc_val: object, exc_tb: object
+    ) -> None: ...  # pragma: no cover
 
-    async def rollback(self) -> None: ...
+    async def commit(self) -> None: ...  # pragma: no cover
+
+    async def rollback(self) -> None: ...  # pragma: no cover

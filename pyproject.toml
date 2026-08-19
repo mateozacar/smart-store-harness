@@ -67,6 +67,10 @@ disallow_any_explicit = false
 module = ["app.infrastructure.config"]
 disallow_any_explicit = false
 
+[[tool.mypy.overrides]]
+module = ["app.interface.schemas.*"]
+disallow_any_explicit = false
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers --strict-config"
