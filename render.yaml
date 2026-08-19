@@ -11,6 +11,8 @@ services:
     autoDeployTrigger: commit
     preDeployCommand: uv run alembic upgrade head
     envVars:
+      - key: UV_PYTHON_DOWNLOADS
+        value: manual
       - key: APP_ENV
         value: staging
       - key: LOG_LEVEL
