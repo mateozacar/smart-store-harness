@@ -25,7 +25,9 @@
       "Bash(command -v jq)",
       "Bash(jq --version)",
       "Bash(command -v uv)",
-      "Bash(./scripts/bootstrap.sh *)"
+      "Bash(./scripts/bootstrap.sh *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
