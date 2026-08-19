@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.products.entities import SKU, Price, Product
+from app.domain.products.entities import SKU, Price, Product, ProductPage
 from app.infrastructure.db.models import ProductRow
 
 
@@ -40,3 +40,35 @@ class SqlAlchemyProductRepository:
         )
         self._session.add(row)
         await self._session.flush()
+
+    async def list(
+        self,
+        page: int,
+        size: int,
+        min_price: Price | None,
+        max_price: Price | None,
+    ) -> ProductPage:
+        """Return a paginated, optionally price-filtered page of products."""
+        base = select(ProductRow)
+        if min_price is not None:
+            base = base.where(ProductRow.price >= min_price.value)
+        if max_price is not None:
+            base = base.where(ProductRow.price <= max_price.value)
+
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total: int = (await self._session.execute(count_stmt)).scalar_one()
+
+        items_stmt = (
+            base.order_by(ProductRow.created_at.desc()).offset((page - 1) * size).limit(size)
+        )
+        rows = (await self._session.execute(items_stmt)).scalars().all()
+        items = [
+            Product(
+                id=row.id,
+                sku=SKU(row.sku),
+                name=row.name,
+                price=Price(Decimal(str(row.price))),
+            )
+            for row in rows
+        ]
+        return ProductPage(items=items, total=total, page=page, size=size)

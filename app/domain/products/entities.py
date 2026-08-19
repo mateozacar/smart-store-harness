@@ -43,3 +43,25 @@ class Product:
     name: str
     price: Price
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+
+@dataclass(frozen=True)
+class ProductPage:
+    """Value object representing a paginated page of products."""
+
+    items: tuple[Product, ...]
+    total: int
+    page: int
+    size: int
+
+    def __init__(
+        self,
+        items: list[Product] | tuple[Product, ...],
+        total: int,
+        page: int,
+        size: int,
+    ) -> None:
+        object.__setattr__(self, "items", tuple(items))
+        object.__setattr__(self, "total", total)
+        object.__setattr__(self, "page", page)
+        object.__setattr__(self, "size", size)
