@@ -1,0 +1,21 @@
+# secrets / env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# claude state (per-session, not source)
+.claude/state/
+
+# macOS
+.DS_Store

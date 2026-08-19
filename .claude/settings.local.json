@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:render.com)",
+      "Skill(deep-research)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:cli.github.com)",
+      "WebFetch(domain:api-docs.render.com)",
+      "WebFetch(domain:docs.bmad-method.org)",
+      "WebFetch(domain:docs.github.com)",
+      "Read(//private/tmp/**)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d['name'], d['type']\\) for d in data]\")",
+      "Bash(python3 -c \"import json,sys,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d['content']\\).decode\\(\\)\\)\")",
+      "Bash(chmod +x /Users/mateozapata/Desktop/smart-store/scripts/*.sh)",
+      "Bash(bash -n /Users/mateozapata/Desktop/smart-store/scripts/bootstrap.sh)",
+      "Bash(bash -n /Users/mateozapata/Desktop/smart-store/scripts/discover-project-ids.sh)",
+      "Bash(bash -n /Users/mateozapata/Desktop/smart-store/scripts/story-0.sh)",
+      "Bash(command -v gh)",
+      "Bash(gh --version)",
+      "Bash(command -v git)",
+      "Bash(git --version)",
+      "Bash(command -v jq)",
+      "Bash(jq --version)",
+      "Bash(command -v uv)",
+      "Bash(./scripts/bootstrap.sh *)"
+    ]
+  }
+}
