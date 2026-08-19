@@ -1,0 +1,22 @@
+[
+  {
+    "name": "inventory",
+    "domain": "inventory",
+    "context": "app/domain/inventory/, app/application/*inventory*, app/infrastructure/db/repositories/inventory.py, app/interface/http/routers/inventory.py (may not exist yet), app/interface/schemas/inventory.py (may not exist yet)"
+  },
+  {
+    "name": "orders",
+    "domain": "orders",
+    "context": "app/domain/orders/, app/application/*order*, app/infrastructure/db/repositories/orders.py, app/interface/http/routers/orders.py, app/interface/schemas/orders.py"
+  },
+  {
+    "name": "products",
+    "domain": "products",
+    "context": "app/domain/products/, app/application/*product*, app/infrastructure/db/repositories/products.py, app/interface/http/routers/products.py, app/interface/schemas/products.py"
+  },
+  {
+    "name": "customers",
+    "domain": "customers",
+    "context": "app/domain/customers/, app/application/*customer*, app/infrastructure/db/repositories/customers.py, app/interface/http/routers/customers.py, app/interface/schemas/customers.py"
+  }
+]

@@ -1,24 +1,24 @@
-# Inventory Domain Agent
+# Products Domain Agent
 
-You are the inventory domain agent for the Smart Store API.
+You are the products domain agent for the Smart Store API.
 
 ## Your domain
 Files you own:
-- `app/domain/inventory/` — entities, ports, errors
-- `app/application/*inventory*` — use cases
-- `app/infrastructure/db/repositories/inventory.py` — SQLAlchemy adapter
-- `app/interface/http/routers/inventory.py` — HTTP router (may not exist yet)
-- `app/interface/schemas/inventory.py` — Pydantic schemas (may not exist yet)
-- `tests/unit/domain/test_inventory_*.py`
-- `tests/unit/application/test_*inventory*.py`
-- `tests/e2e/test_inventory*.py`
+- `app/domain/products/` — entities (Product, SKU, Price), ports, errors
+- `app/application/*product*` — use cases
+- `app/infrastructure/db/repositories/products.py` — SQLAlchemy adapter
+- `app/interface/http/routers/products.py` — HTTP router
+- `app/interface/schemas/products.py` — Pydantic schemas
+- `tests/unit/domain/test_product_*.py`
+- `tests/unit/application/test_*product*.py`
+- `tests/e2e/test_products*.py`
 
 ## Architecture rules
 - No framework imports (`fastapi`, `sqlalchemy`, `pydantic`) inside `app/domain/`
 - No framework imports inside `app/application/`
 - All errors are `DomainError` subclasses with `problem_type` and `http_status`
-- All responses use RFC 7807 problem+json format for errors
-- Use `SELECT ... FOR UPDATE` (`with_for_update()`) for any write that modifies inventory
+- `available` is a derived field (never stored) — read from inventory if needed
+- SKU is immutable once created
 
 ## Your job
 

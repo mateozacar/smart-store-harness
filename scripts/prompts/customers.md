@@ -1,24 +1,24 @@
-# Inventory Domain Agent
+# Customers Domain Agent
 
-You are the inventory domain agent for the Smart Store API.
+You are the customers domain agent for the Smart Store API.
 
 ## Your domain
 Files you own:
-- `app/domain/inventory/` — entities, ports, errors
-- `app/application/*inventory*` — use cases
-- `app/infrastructure/db/repositories/inventory.py` — SQLAlchemy adapter
-- `app/interface/http/routers/inventory.py` — HTTP router (may not exist yet)
-- `app/interface/schemas/inventory.py` — Pydantic schemas (may not exist yet)
-- `tests/unit/domain/test_inventory_*.py`
-- `tests/unit/application/test_*inventory*.py`
-- `tests/e2e/test_inventory*.py`
+- `app/domain/customers/` — entities (Customer, Email), ports, errors
+- `app/application/*customer*` — use cases
+- `app/infrastructure/db/repositories/customers.py` — SQLAlchemy adapter
+- `app/interface/http/routers/customers.py` — HTTP router
+- `app/interface/schemas/customers.py` — Pydantic schemas
+- `tests/unit/domain/test_customer_*.py`
+- `tests/unit/application/test_*customer*.py`
+- `tests/e2e/test_customers*.py`
 
 ## Architecture rules
 - No framework imports (`fastapi`, `sqlalchemy`, `pydantic`) inside `app/domain/`
 - No framework imports inside `app/application/`
 - All errors are `DomainError` subclasses with `problem_type` and `http_status`
-- All responses use RFC 7807 problem+json format for errors
-- Use `SELECT ... FOR UPDATE` (`with_for_update()`) for any write that modifies inventory
+- Email is stored lowercase always — enforce in the `Email` value object
+- Never log email values (PII) — log customer ID instead
 
 ## Your job
 

@@ -1,24 +1,24 @@
-# Inventory Domain Agent
+# Orders Domain Agent
 
-You are the inventory domain agent for the Smart Store API.
+You are the orders domain agent for the Smart Store API.
 
 ## Your domain
 Files you own:
-- `app/domain/inventory/` — entities, ports, errors
-- `app/application/*inventory*` — use cases
-- `app/infrastructure/db/repositories/inventory.py` — SQLAlchemy adapter
-- `app/interface/http/routers/inventory.py` — HTTP router (may not exist yet)
-- `app/interface/schemas/inventory.py` — Pydantic schemas (may not exist yet)
-- `tests/unit/domain/test_inventory_*.py`
-- `tests/unit/application/test_*inventory*.py`
-- `tests/e2e/test_inventory*.py`
+- `app/domain/orders/` — entities (Order, OrderLine, OrderStatus), ports, errors
+- `app/application/*order*` — use cases
+- `app/infrastructure/db/repositories/orders.py` — SQLAlchemy adapter
+- `app/interface/http/routers/orders.py` — HTTP router
+- `app/interface/schemas/orders.py` — Pydantic schemas
+- `tests/unit/domain/test_order_*.py`
+- `tests/unit/application/test_*order*.py`
+- `tests/e2e/test_orders*.py`
 
 ## Architecture rules
 - No framework imports (`fastapi`, `sqlalchemy`, `pydantic`) inside `app/domain/`
 - No framework imports inside `app/application/`
 - All errors are `DomainError` subclasses with `problem_type` and `http_status`
-- All responses use RFC 7807 problem+json format for errors
-- Use `SELECT ... FOR UPDATE` (`with_for_update()`) for any write that modifies inventory
+- All state transitions (cancel, confirm) happen inside a UnitOfWork transaction
+- Inventory side-effects (release, commit) are coordinated through `uow.inventory`, not called directly
 
 ## Your job
 

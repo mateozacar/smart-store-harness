@@ -33,7 +33,18 @@
       "Bash(git fetch *)",
       "Bash(git stash *)",
       "Bash(uv run *)",
-      "Bash(bash *)"
+      "Bash(bash *)",
+      "Bash(git push *)",
+      "Skill(story)",
+      "Bash(mkdir -p .claude/state)",
+      "Bash(printf '%s\\\\n' \"19\")",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:herdr.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(herdr worktree:*)",
+      "Bash(herdr agent:*)",
+      "Bash(echo need another method:*)",
+      "Bash(herdr pane:*)"
     ]
   }
 }
