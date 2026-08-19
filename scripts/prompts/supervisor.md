@@ -18,7 +18,10 @@ If the check fails, stop immediately.
 
 ## Step 1 — Read the GitHub issue
 
-Receive the issue number as input (e.g. "issue 42") or find the latest open issue:
+**If called from `/build-team`**, the issue number and branch are injected at the end of this
+prompt — skip the discovery step and use those values directly.
+
+**If called standalone**, receive the issue number as input or find the latest open issue:
 
 ```bash
 gh issue list --state open --limit 5 --json number,title,body
