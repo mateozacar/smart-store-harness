@@ -2,6 +2,7 @@
 
 from typing import Protocol, runtime_checkable
 
+from app.domain.customers.ports import CustomerRepository
 from app.domain.products.ports import ProductRepository
 
 
@@ -10,6 +11,7 @@ class UnitOfWork(Protocol):
     """Defines the commit/rollback boundary used by application use cases."""
 
     products: ProductRepository
+    customers: CustomerRepository
 
     async def __aenter__(self) -> "UnitOfWork": ...  # pragma: no cover
 

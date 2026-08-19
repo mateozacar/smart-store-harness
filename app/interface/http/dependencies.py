@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.create_product import CreateProductUseCase
 from app.application.list_products import ListProductsUseCase
+from app.application.register_customer import RegisterCustomerUseCase
 from app.infrastructure.db.session import session_factory as _default_session_factory
 from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -46,6 +47,13 @@ def _get_list_products_use_case(
     return ListProductsUseCase(uow)
 
 
+def _get_register_customer_use_case(
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(_get_uow)],
+) -> RegisterCustomerUseCase:
+    """Provide a RegisterCustomerUseCase for the current request."""
+    return RegisterCustomerUseCase(uow)
+
+
 get_create_product_use_case: Annotated[
     CreateProductUseCase, Depends(_get_create_product_use_case)
 ] = Depends(_get_create_product_use_case)
@@ -53,3 +61,7 @@ get_create_product_use_case: Annotated[
 get_list_products_use_case: Annotated[ListProductsUseCase, Depends(_get_list_products_use_case)] = (
     Depends(_get_list_products_use_case)
 )
+
+get_register_customer_use_case: Annotated[
+    RegisterCustomerUseCase, Depends(_get_register_customer_use_case)
+] = Depends(_get_register_customer_use_case)
