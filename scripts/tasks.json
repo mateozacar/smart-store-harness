@@ -1,0 +1,23 @@
+[
+  {
+    "name": "inventory",
+    "branch": "feat/inventory-router",
+    "prompt": "inventory.md",
+    "depends_on": null,
+    "description": "GET /api/v1/inventory/{sku} + PATCH /api/v1/inventory/{sku}"
+  },
+  {
+    "name": "products-detail",
+    "branch": "feat/products-get-by-sku",
+    "prompt": "products_detail.md",
+    "depends_on": null,
+    "description": "GET /api/v1/products/{sku} with derived available field"
+  },
+  {
+    "name": "orders-read",
+    "branch": "feat/orders-get-patch",
+    "prompt": "orders_read.md",
+    "depends_on": ["inventory"],
+    "description": "GET /api/v1/orders/{id} + PATCH /api/v1/orders/{id} cancel/confirm"
+  }
+]
