@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: smart-store-staging
+    runtime: python
+    region: oregon
+    plan: starter
+    branch: develop
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    preDeployCommand: uv run alembic upgrade head
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-store-staging-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: ""
+
+databases:
+  - name: smart-store-staging-db
+    databaseName: smart_store
+    plan: starter
+    region: oregon

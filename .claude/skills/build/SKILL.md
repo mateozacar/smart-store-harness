@@ -8,6 +8,8 @@ allowed-tools:
   - Bash
   - Agent
   - mcp__github__get_issue
+  - mcp__github__create_branch
+  - mcp__github__push_files
   - mcp__github__create_pull_request
 ---
 
@@ -112,12 +114,21 @@ Skip if `DRY_RUN=1`.
 
 ### 6. Create the branch and check it out
 
-Use `gh issue develop` so the branch is linked to the issue — this makes `Closes #<n>` in the PR body auto-close the issue on merge.
+Call `mcp__github__create_branch` with `owner=$GITHUB_OWNER`, `repo=$GITHUB_REPO`, `branch=$BRANCH`, `from_branch=develop` to create the remote branch. Then check it out locally:
+
+```bash
+git fetch origin
+git checkout -b "$BRANCH" "origin/$BRANCH"
+```
+
+If `mcp__github__create_branch` fails, fall back to:
 
 ```bash
 git fetch origin develop
 gh issue develop "$ISSUE_NUMBER" --name "$BRANCH" --base develop --checkout
 ```
+
+The `Closes #<n>` in the PR body is what auto-closes the issue on merge; no special branch-issue link is required.
 
 Skip if `DRY_RUN=1`.
 
@@ -201,11 +212,19 @@ fi
 
 ### 12. Push the branch
 
+Collect all files changed on the branch relative to `develop`, read their contents, and push via MCP:
+
+1. `git diff origin/develop..HEAD --name-only` — list changed paths.
+2. For each path, read its current content.
+3. Call `mcp__github__push_files` with `owner=$GITHUB_OWNER`, `repo=$GITHUB_REPO`, `branch=$BRANCH`, `files=[{path, content}]`, `message="feat: implement story #$ISSUE_NUMBER"`.
+
+If `mcp__github__push_files` fails (e.g. binary files, oversized diff, auth), fall back to:
+
 ```bash
 git push -u origin "$BRANCH"
 ```
 
-If push fails (protected branch, auth), print the exact failure and the manual command. Do not transition status further.
+If both fail, print the exact error and the manual command. Do not transition status further.
 
 ### 13. Open the PR against `develop`
 
@@ -294,7 +313,9 @@ Next:     Await Claude Code Review action; merge to develop when green.
 | Branch already exists on origin | Stop; ask user (may indicate a stale prior run). | (unchanged) |
 | Dev subagent FAILED report | Stop before push. Human triages. | In Progress |
 | Any quality gate fails | Stop before push. Print gate output. | In Progress |
-| Push fails | Print manual command. | In Progress |
+| MCP branch create fails | Fall back to `gh issue develop`. | (unchanged) |
+| MCP push fails | Fall back to `git push -u origin "$BRANCH"`. | In Progress |
+| Both push paths fail | Print manual command. | In Progress |
 | PR creation fails | Print manual `gh pr create`. Branch is on origin. | In Progress |
 | In Review mutation fails | Print manual mutation. PR is open. | In Progress (fix by hand) |
 

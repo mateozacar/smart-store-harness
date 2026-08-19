@@ -16,6 +16,7 @@ coverage.xml
 
 # claude state (per-session, not source)
 .claude/state/
+.claude/worktrees/
 
 # macOS
 .DS_Store
