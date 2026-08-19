@@ -97,13 +97,17 @@ Scenario: Concurrent orders do not double-book
 Stories the presenter can inject during the talk with `/story "<one-liner>"`. Ordered from smallest to largest so the harness runtime stays predictable on stage.
 
 **Features**
-1. Release reservation when an order is cancelled.
-2. Confirm an order: convert reservation to committed decrement.
-3. List products with pagination (`page`, `size`, `sort=created_at.desc`).
-4. Search products by partial name, case-insensitive.
-5. Attach a customer to an order at creation time.
-6. Expose derived `available` on `GET /api/v1/products/{sku}`.
-7. Idempotency-Key header on `POST /api/v1/orders` to make retries safe.
+1. `POST /api/v1/products` — Create a product in the catalog.
+2. `PATCH /api/v1/inventory/{sku}` — Adjust on-hand stock for a product.
+3. `POST /api/v1/customers` — Register a new customer.
+4. `GET /api/v1/orders/{id}` — View a placed order and its current state.
+5. `PATCH /api/v1/orders/{id}` — Cancel an order: release its inventory reservation.
+6. `PATCH /api/v1/orders/{id}` — Confirm an order: convert reservation to committed decrement.
+7. `POST /api/v1/orders` (with `customer_id`) — Attach a customer when placing an order.
+8. `GET /api/v1/products` — List products with pagination (`page`, `size`, `sort=created_at.desc`).
+9. `GET /api/v1/products?name=` — Search products by partial name, case-insensitive.
+10. `GET /api/v1/products/{sku}` — Expose derived `available` field on product detail.
+11. `POST /api/v1/orders` (with `Idempotency-Key`) — Make order creation retries safe.
 
 **Bugs (planted intentionally, to be fixed live by the harness)**
 1. `POST /api/v1/customers` accepts duplicate emails when case differs (`ada@x.com` vs `Ada@x.com`).
