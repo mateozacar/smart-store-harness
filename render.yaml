@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: starter
     branch: develop
-    buildCommand: pip install uv && uv python install 3.12 && uv sync --frozen
+    buildCommand: pip install uv && uv sync --frozen
     startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     autoDeployTrigger: commit
