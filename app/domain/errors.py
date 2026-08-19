@@ -44,3 +44,17 @@ class InvalidPriceRangeError(DomainError):
 
     def __init__(self, detail: str) -> None:
         super().__init__("invalid-price-range", detail)
+
+
+class CustomerNotFoundError(DomainError):
+    """Raised when a referenced customer_id does not exist."""
+
+    problem_type = "customer-not-found"
+    http_status = 422
+
+    def __init__(self, customer_id: str) -> None:
+        super().__init__(
+            "customer-not-found",
+            f"Customer with id '{customer_id}' does not exist.",
+        )
+        self.customer_id = customer_id

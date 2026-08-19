@@ -3,6 +3,8 @@
 from typing import Protocol, runtime_checkable
 
 from app.domain.customers.ports import CustomerRepository
+from app.domain.inventory.ports import InventoryRepository
+from app.domain.orders.ports import OrderRepository
 from app.domain.products.ports import ProductRepository
 
 
@@ -12,6 +14,8 @@ class UnitOfWork(Protocol):
 
     products: ProductRepository
     customers: CustomerRepository
+    inventory: InventoryRepository
+    orders: OrderRepository
 
     async def __aenter__(self) -> "UnitOfWork": ...  # pragma: no cover
 
