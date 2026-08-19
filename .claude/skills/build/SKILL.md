@@ -196,6 +196,8 @@ bash scripts/check_layers.sh
 
 Any non-zero exit → stop before push. Print which gate failed and its output. Status remains In Progress; branch is retained locally.
 
+**Migration verification.** Parse the `## Dependencies` → `Data model:` section from the issue body. For every table listed, grep `alembic/versions/` for a `create_table("<name>"` or `add_column("<name>"` reference. Missing ⇒ stop before push and print `Migration missing for table: <name>`. This is the gate that would have caught the Render #6 incident where `products` compiled and deployed without a migration referenced.
+
 ### 11. Confirm all work is committed
 
 ```bash
@@ -284,7 +286,7 @@ Branch:   <branch>  (pushed to origin)
 PR:       <pr_url>
 Status:   Ready → In Progress → In Review
 Tests:    <count> passed  (coverage <pct>%)
-Gates:    ruff ✓  ruff-format ✓  mypy ✓  layers ✓  pytest ✓
+Gates:    ruff ✓  ruff-format ✓  mypy ✓  layers ✓  pytest ✓  migrations ✓
 Subagent: <one-line summary from dev-agent's Notes field>
 Next:     Await Claude Code Review action; merge to develop when green.
 ```
