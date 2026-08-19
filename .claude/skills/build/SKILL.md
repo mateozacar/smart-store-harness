@@ -35,6 +35,34 @@ Stop and report immediately if any check fails.
 
 ## Steps
 
+### 0. Build plan — show execution progress upfront
+
+Before taking any action, create a task list that mirrors every step of this skill. This gives the user a live progress view for the entire build run.
+
+Call `TaskCreate` for each of the following tasks **in a single burst** (all pending, no dependencies yet):
+
+| # | Subject | activeForm |
+|---|---|---|
+| 1 | Resolve issue number | Resolving issue |
+| 2 | Fetch issue from GitHub | Fetching issue |
+| 3 | Compute Gitflow branch name | Computing branch name |
+| 4 | Find Projects v2 item ID | Looking up board item |
+| 5 | Transition status → In Progress | Transitioning status |
+| 6 | Create and check out feature branch | Creating branch |
+| 7 | Load language ruleset | Loading ruleset |
+| 8 | Spawn dev-agent subagent | Running dev-agent |
+| 9 | Read and validate subagent report | Reading report |
+| 10 | Verify quality gates | Running quality gates |
+| 11 | Confirm all work is committed | Checking commits |
+| 12 | Push branch to origin | Pushing branch |
+| 13 | Open PR against develop | Opening PR |
+| 14 | Transition status → In Review | Transitioning status |
+| 15 | Persist state and report | Finalizing |
+
+As each step begins, mark its task `in_progress`. When it completes successfully, mark it `completed`. If a step fails and the skill must stop, mark that task `in_progress` (blocked) and leave remaining tasks `pending`.
+
+Then proceed immediately — no user confirmation needed.
+
 ### 1. Resolve the issue number
 
 ```bash
