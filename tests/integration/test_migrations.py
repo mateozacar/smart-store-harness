@@ -66,18 +66,25 @@ async def test_inventory_check_constraints_enforced(pg_engine: AsyncEngine) -> N
 
 async def test_customers_email_unique_constraint(pg_engine: AsyncEngine) -> None:
     """customers.email has a UNIQUE constraint."""
+    # Use a migration-test-specific email to avoid collisions with e2e fixtures.
+    test_email = "migration-test-unique@example.com"
+
+    # Clean up any leftover from a previous interrupted run.
+    async with pg_engine.begin() as conn:
+        await conn.execute(text(f"DELETE FROM customers WHERE email = '{test_email}'"))
+
     async with pg_engine.begin() as conn:
         await conn.execute(
-            text("INSERT INTO customers (id, email) VALUES ('uuid-c1', 'alice@example.com')")
+            text(f"INSERT INTO customers (id, email) VALUES ('uuid-mig-c1', '{test_email}')")
         )
 
-    # Attempt to insert a duplicate email
+    # Attempt to insert a duplicate email — must raise an IntegrityError.
     async with pg_engine.begin() as conn:
         with pytest.raises(IntegrityError):
             await conn.execute(
-                text("INSERT INTO customers (id, email) VALUES ('uuid-c2', 'alice@example.com')")
+                text(f"INSERT INTO customers (id, email) VALUES ('uuid-mig-c2', '{test_email}')")
             )
 
     # Clean up
     async with pg_engine.begin() as conn:
-        await conn.execute(text("DELETE FROM customers WHERE email = 'alice@example.com'"))
+        await conn.execute(text(f"DELETE FROM customers WHERE email = '{test_email}'"))

@@ -404,7 +404,11 @@ The subagent writes all production code first, then writes all tests in a single
 2. Write application use cases.
 3. Write infrastructure adapters (repositories, unit of work, SQLAlchemy models).
 4. Write the interface layer (routes, schemas, error handler wiring).
-5. After each layer: `uv run ruff check app && uv run ruff format app && uv run mypy app` — must be clean before moving to the next layer.
+5. After **all four layers are written**, run the quality gate once on the full package:
+   ```bash
+   uv run ruff check app && uv run ruff format --check app && uv run mypy app
+   ```
+   Fix any errors, then re-run until clean. Never scope these commands to a subdirectory — always `app/`.
 6. Commit: `feat: <description>`.
 
 **Phase 2 — Write all tests (after all code and migrations exist)**

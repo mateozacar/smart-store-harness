@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- feat: add POST /api/v1/customers — register a customer with a unique, RFC 5322-validated email; normalizes to lowercase; returns 409 on duplicate email, 422 on malformed email (#17)
 - feat: scaffold hexagonal layout with FastAPI, SQLAlchemy, Alembic, testcontainers baseline (#1)
 - feat: add POST /api/v1/products — create a product with unique SKU, name, and price; returns 409 on duplicate SKU, 422 on invalid input (#6)
 - feat: add GET /api/v1/products — list products with 1-based pagination (default page=1, size=20, max size=100) and optional inclusive price range filter; ordered by created_at DESC; returns 422 problem+json for invalid price range or pagination params (#11)
