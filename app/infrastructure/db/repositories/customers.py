@@ -43,3 +43,11 @@ class SqlAlchemyCustomerRepository:
         if row is None:
             return None
         return Customer(id=row.id, email=Email(row.email))
+
+    async def get_by_id(self, customer_id: str) -> Customer | None:
+        """Return the Customer with the given id, or None if not found."""
+        stmt = select(CustomerRow).where(CustomerRow.id == customer_id)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        if row is None:
+            return None
+        return Customer(id=row.id, email=Email(row.email))

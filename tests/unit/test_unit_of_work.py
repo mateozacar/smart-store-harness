@@ -18,6 +18,8 @@ class FakeUoW:
 
     products: Any = None
     customers: Any = None
+    inventory: Any = None
+    orders: Any = None
 
     async def __aenter__(self) -> "FakeUoW":
         return self

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.create_product import CreateProductUseCase
 from app.application.list_products import ListProductsUseCase
+from app.application.place_order import PlaceOrderUseCase
 from app.application.register_customer import RegisterCustomerUseCase
 from app.infrastructure.db.session import session_factory as _default_session_factory
 from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
@@ -65,3 +66,15 @@ get_list_products_use_case: Annotated[ListProductsUseCase, Depends(_get_list_pro
 get_register_customer_use_case: Annotated[
     RegisterCustomerUseCase, Depends(_get_register_customer_use_case)
 ] = Depends(_get_register_customer_use_case)
+
+
+def _get_place_order_use_case(
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(_get_uow)],
+) -> PlaceOrderUseCase:
+    """Provide a PlaceOrderUseCase for the current request."""
+    return PlaceOrderUseCase(uow)
+
+
+get_place_order_use_case: Annotated[PlaceOrderUseCase, Depends(_get_place_order_use_case)] = (
+    Depends(_get_place_order_use_case)
+)

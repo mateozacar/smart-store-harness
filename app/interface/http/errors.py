@@ -18,7 +18,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
         "detail": exc.detail,
     }
     # Include any extra machine-readable fields attached by the subclass.
-    for key in ("sku", "requested", "available"):
+    for key in ("sku", "requested", "available", "customer_id"):
         if hasattr(exc, key):
             body[key] = getattr(exc, key)
     return JSONResponse(

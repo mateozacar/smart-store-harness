@@ -8,8 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.customers.entities import EmailConflictError
 from app.domain.customers.ports import CustomerRepository
 from app.domain.errors import SkuConflictError
+from app.domain.inventory.ports import InventoryRepository
+from app.domain.orders.ports import OrderRepository
 from app.domain.products.ports import ProductRepository
 from app.infrastructure.db.repositories.customers import SqlAlchemyCustomerRepository
+from app.infrastructure.db.repositories.inventory import SqlAlchemyInventoryRepository
+from app.infrastructure.db.repositories.orders import SqlAlchemyOrderRepository
 from app.infrastructure.db.repositories.products import SqlAlchemyProductRepository
 
 
@@ -18,6 +22,8 @@ class SqlAlchemyUnitOfWork:
 
     products: ProductRepository
     customers: CustomerRepository
+    inventory: InventoryRepository
+    orders: OrderRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
@@ -27,6 +33,8 @@ class SqlAlchemyUnitOfWork:
         self._session = self._session_factory()
         self.products = SqlAlchemyProductRepository(self._session)
         self.customers = SqlAlchemyCustomerRepository(self._session)
+        self.inventory = SqlAlchemyInventoryRepository(self._session)
+        self.orders = SqlAlchemyOrderRepository(self._session)
         return self
 
     async def __aexit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
