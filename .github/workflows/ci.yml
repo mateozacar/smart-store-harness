@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  quality:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        run: uv run ruff check app tests
+
+      - name: Ruff format check
+        run: uv run ruff format --check app tests
+
+      - name: mypy
+        run: uv run mypy app
+
+      - name: Layer isolation check
+        run: bash scripts/check_layers.sh
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run unit tests
+        run: uv run pytest tests/unit/ -x -q --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage.xml
+
+  integration:
+    name: Integration & e2e tests
+    runs-on: ubuntu-latest
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smart_store
+          POSTGRES_PASSWORD: smart_store
+          POSTGRES_DB: smart_store
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smart_store"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://smart_store:smart_store@localhost:5432/smart_store
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Alembic migrations
+        run: uv run alembic upgrade head
+
+      - name: Run integration tests
+        run: uv run pytest tests/integration/ tests/e2e/ -x -q -m "integration or e2e" --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: coverage.xml
