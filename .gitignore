@@ -18,5 +18,8 @@ coverage.xml
 .claude/state/
 .claude/worktrees/
 
+# CodeGraph index (auto-generated, not source)
+.codegraph/
+
 # macOS
 .DS_Store
