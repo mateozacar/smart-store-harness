@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- feat: add POST /api/v1/auth/login — authenticate a Buyer with email + bcrypt-hashed password; returns a short-lived JWT (sub=customer_id, exp); returns 401 invalid-credentials for any failure (no user enumeration); password_hash column added to customers via migration 0002; POST /api/v1/customers now requires a password field (#23)
 - feat: add POST /api/v1/orders — place an order with atomic inventory reservation (SELECT FOR UPDATE); optionally attach to a registered customer; returns 409 on insufficient stock, 422 on unknown customer_id (#19)
 - feat: add POST /api/v1/customers — register a customer with a unique, RFC 5322-validated email; normalizes to lowercase; returns 409 on duplicate email, 422 on malformed email (#17)
 - feat: scaffold hexagonal layout with FastAPI, SQLAlchemy, Alembic, testcontainers baseline (#1)
