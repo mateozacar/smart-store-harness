@@ -21,6 +21,9 @@ class FakeInventoryRepository:
                     sku=SKU(sku_value), on_hand=on_hand, reserved=reserved
                 )
 
+    async def get(self, sku: SKU) -> InventoryLevel | None:
+        return self.state.get(sku.value)
+
     async def get_for_update(self, sku: SKU) -> InventoryLevel:
         if sku.value not in self.state:
             raise DomainError("inventory-not-found", f"No inventory record for SKU '{sku.value}'.")
