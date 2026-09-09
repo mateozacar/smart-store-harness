@@ -11,6 +11,7 @@ class RegisterCustomerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: str
+    password: str
 
 
 class CustomerResponse(BaseModel):

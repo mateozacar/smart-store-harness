@@ -41,6 +41,8 @@ class Customer:
 
     email: Email
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    # Stored bcrypt hash; None for customers created before auth was introduced.
+    password_hash: str | None = None
 
 
 class InvalidEmailError(DomainError):

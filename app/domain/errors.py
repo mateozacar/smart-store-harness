@@ -46,6 +46,20 @@ class InvalidPriceRangeError(DomainError):
         super().__init__("invalid-price-range", detail)
 
 
+class InvalidCredentialsError(DomainError):
+    """Raised when email/password combination does not match any registered customer.
+
+    Deliberately does not distinguish 'email not found' from 'wrong password'
+    to prevent user enumeration (BEST_PRACTICES §8).
+    """
+
+    problem_type = "invalid-credentials"
+    http_status = 401
+
+    def __init__(self) -> None:
+        super().__init__("invalid-credentials", "Email or password is incorrect.")
+
+
 class CustomerNotFoundError(DomainError):
     """Raised when a referenced customer_id does not exist."""
 

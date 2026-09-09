@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     cors_origins: str = ""
+    secret_key: str = "change-me-in-production"
+    token_expire_minutes: int = 30
 
     @property
     def async_database_url(self) -> str:

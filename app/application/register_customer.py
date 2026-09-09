@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import bcrypt
+
 from app.application.unit_of_work import UnitOfWork
 from app.domain.customers.entities import Customer, Email
 
@@ -13,6 +15,7 @@ class RegisterCustomerCommand:
     """Input command for the RegisterCustomer use case."""
 
     email: str
+    password: str
 
 
 class RegisterCustomerUseCase:
@@ -27,9 +30,12 @@ class RegisterCustomerUseCase:
         The raw email is normalized to lowercase before validation and persistence.
         InvalidEmailError is raised if the email does not match RFC 5322 basic form.
         EmailConflictError is raised if a customer with the same normalized email exists.
+        The password is hashed via bcrypt before persistence; the plain-text password
+        is never stored or logged.
         """
         email = Email.normalize(cmd.email)
-        customer = Customer(email=email)
+        password_hash = bcrypt.hashpw(cmd.password.encode(), bcrypt.gensalt()).decode()
+        customer = Customer(email=email, password_hash=password_hash)
 
         async with self._uow:
             await self._uow.customers.add(customer)

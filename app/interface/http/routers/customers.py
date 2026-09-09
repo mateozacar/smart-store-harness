@@ -55,6 +55,7 @@ async def register_customer(
     Returns 409 if a customer with the same email already exists.
     Returns 422 if the email address does not match RFC 5322 basic form.
     """
-    customer = await use_case.execute(RegisterCustomerCommand(email=body.email))
+    cmd = RegisterCustomerCommand(email=body.email, password=body.password)
+    customer = await use_case.execute(cmd)
     response.headers["Location"] = f"/api/v1/customers/{customer.id}"
     return CustomerResponse(id=customer.id, email=customer.email.value)

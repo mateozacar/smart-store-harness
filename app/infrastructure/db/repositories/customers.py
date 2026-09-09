@@ -26,6 +26,7 @@ class SqlAlchemyCustomerRepository:
         row = CustomerRow(
             id=customer.id,
             email=customer.email.value,
+            password_hash=customer.password_hash,
         )
         self._session.add(row)
         try:
@@ -42,7 +43,7 @@ class SqlAlchemyCustomerRepository:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
             return None
-        return Customer(id=row.id, email=Email(row.email))
+        return Customer(id=row.id, email=Email(row.email), password_hash=row.password_hash)
 
     async def get_by_id(self, customer_id: str) -> Customer | None:
         """Return the Customer with the given id, or None if not found."""
@@ -50,4 +51,4 @@ class SqlAlchemyCustomerRepository:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
             return None
-        return Customer(id=row.id, email=Email(row.email))
+        return Customer(id=row.id, email=Email(row.email), password_hash=row.password_hash)
