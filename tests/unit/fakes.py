@@ -6,7 +6,7 @@ from app.domain.customers.entities import Customer, Email, EmailConflictError
 from app.domain.errors import DomainError
 from app.domain.inventory.entities import InventoryLevel
 from app.domain.orders.entities import Order
-from app.domain.products.entities import SKU
+from app.domain.products.entities import SKU, Price, Product, ProductPage
 
 
 class FakeInventoryRepository:
@@ -31,6 +31,33 @@ class FakeInventoryRepository:
 
     async def save(self, level: InventoryLevel) -> None:
         self.state[level.sku.value] = level
+
+
+class FakeProductRepository:
+    """In-memory product repository for unit testing."""
+
+    def __init__(self, products: dict[str, Product] | None = None) -> None:
+        self._products: dict[str, Product] = products or {}
+
+    async def get_by_sku(self, sku: SKU) -> Product | None:
+        return self._products.get(sku.value)
+
+    async def add(self, product: Product) -> None:
+        self._products[product.sku.value] = product
+
+    async def list(
+        self,
+        page: int,
+        size: int,
+        min_price: Price | None,
+        max_price: Price | None,
+    ) -> ProductPage:
+        return ProductPage(
+            items=list(self._products.values()),
+            total=len(self._products),
+            page=page,
+            size=size,
+        )
 
 
 class FakeOrderRepository:
@@ -69,19 +96,19 @@ class FakeCustomerRepository:
 
 
 class FakeUnitOfWork:
-    """In-memory unit of work for unit testing the PlaceOrder use case."""
+    """In-memory unit of work for unit testing application use cases."""
 
     def __init__(
         self,
         inventory: FakeInventoryRepository | None = None,
         orders: FakeOrderRepository | None = None,
         customers: FakeCustomerRepository | None = None,
+        products: FakeProductRepository | None = None,
     ) -> None:
         self.inventory: FakeInventoryRepository = inventory or FakeInventoryRepository()
         self.orders: FakeOrderRepository = orders or FakeOrderRepository()
         self.customers: FakeCustomerRepository = customers or FakeCustomerRepository()
-        # products required by UnitOfWork Protocol; not used by PlaceOrderUseCase
-        self.products: object = None
+        self.products: FakeProductRepository = products or FakeProductRepository()
         self.committed = False
 
     async def __aenter__(self) -> FakeUnitOfWork:
@@ -106,3 +133,14 @@ class FakeUnitOfWork:
         inv = FakeInventoryRepository(stock)
         cust = FakeCustomerRepository(customers)
         return cls(inventory=inv, customers=cust)
+
+    @classmethod
+    def with_products(
+        cls,
+        products: dict[str, Product],
+        stock: dict[str, tuple[int, int]] | None = None,
+    ) -> FakeUnitOfWork:
+        """Factory for creating a UoW with pre-seeded products and optional inventory."""
+        prod = FakeProductRepository(products)
+        inv = FakeInventoryRepository(stock)
+        return cls(inventory=inv, products=prod)
