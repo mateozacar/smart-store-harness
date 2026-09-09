@@ -33,7 +33,7 @@ async def test_post_customers_returns_201(app: FastAPI) -> None:
     ) as client:
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "buyer@example.com"},
+            json={"email": "buyer@example.com", "password": "pw-test"},
         )
 
     assert response.status_code == 201
@@ -54,7 +54,7 @@ async def test_post_customers_normalizes_email_to_lowercase(app: FastAPI) -> Non
     ) as client:
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "Alice@Example.COM"},
+            json={"email": "Alice@Example.COM", "password": "pw-test"},
         )
 
     assert response.status_code == 201
@@ -77,10 +77,13 @@ async def test_post_customers_409_on_duplicate_email(app: FastAPI) -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        await client.post("/api/v1/customers", json={"email": "taken-exact@example.com"})
+        await client.post(
+            "/api/v1/customers",
+            json={"email": "taken-exact@example.com", "password": "pw-test"},
+        )
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "taken-exact@example.com"},
+            json={"email": "taken-exact@example.com", "password": "pw-test"},
         )
 
     assert response.status_code == 409
@@ -98,10 +101,13 @@ async def test_post_customers_409_case_insensitive_duplicate(app: FastAPI) -> No
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        await client.post("/api/v1/customers", json={"email": "taken-ci@example.com"})
+        await client.post(
+            "/api/v1/customers",
+            json={"email": "taken-ci@example.com", "password": "pw-test"},
+        )
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "TAKEN-CI@EXAMPLE.COM"},
+            json={"email": "TAKEN-CI@EXAMPLE.COM", "password": "pw-test"},
         )
 
     assert response.status_code == 409
@@ -126,7 +132,7 @@ async def test_post_customers_422_on_malformed_email(app: FastAPI) -> None:
     ) as client:
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "not-an-email"},
+            json={"email": "not-an-email", "password": "pw-test"},
         )
 
     assert response.status_code == 422
@@ -147,7 +153,7 @@ async def test_post_customers_rejects_extra_fields(app: FastAPI) -> None:
     ) as client:
         response = await client.post(
             "/api/v1/customers",
-            json={"email": "valid@example.com", "name": "unexpected"},
+            json={"email": "valid@example.com", "password": "pw-test", "name": "unexpected"},
         )
 
     assert response.status_code == 422

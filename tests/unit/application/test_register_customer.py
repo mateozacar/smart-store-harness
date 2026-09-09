@@ -57,7 +57,8 @@ async def test_creates_customer_with_normalized_email() -> None:
     uow = FakeUnitOfWork()
     use_case = RegisterCustomerUseCase(uow)
 
-    customer = await use_case.execute(RegisterCustomerCommand(email="buyer@example.com"))
+    cmd = RegisterCustomerCommand(email="buyer@example.com", password="s3cr3t")
+    customer = await use_case.execute(cmd)
 
     assert customer.email.value == "buyer@example.com"
     assert len(customer.id) == 36
@@ -73,7 +74,8 @@ async def test_email_is_normalized_to_lowercase_by_use_case() -> None:
     uow = FakeUnitOfWork()
     use_case = RegisterCustomerUseCase(uow)
 
-    customer = await use_case.execute(RegisterCustomerCommand(email="Alice@Example.COM"))
+    cmd = RegisterCustomerCommand(email="Alice@Example.COM", password="s3cr3t")
+    customer = await use_case.execute(cmd)
 
     assert customer.email.value == "alice@example.com"
     assert uow.committed is True
@@ -97,7 +99,9 @@ async def test_raises_email_conflict_on_duplicate() -> None:
     use_case = RegisterCustomerUseCase(uow)
 
     with pytest.raises(EmailConflictError) as exc_info:
-        await use_case.execute(RegisterCustomerCommand(email="taken@example.com"))
+        await use_case.execute(
+            RegisterCustomerCommand(email="taken@example.com", password="s3cr3t")
+        )
 
     assert exc_info.value.http_status == 409
     assert uow.committed is False
@@ -115,7 +119,9 @@ async def test_raises_email_conflict_on_case_insensitive_duplicate() -> None:
     use_case = RegisterCustomerUseCase(uow)
 
     with pytest.raises(EmailConflictError) as exc_info:
-        await use_case.execute(RegisterCustomerCommand(email="TAKEN@EXAMPLE.COM"))
+        await use_case.execute(
+            RegisterCustomerCommand(email="TAKEN@EXAMPLE.COM", password="s3cr3t")
+        )
 
     assert exc_info.value.http_status == 409
     assert uow.committed is False
@@ -136,7 +142,7 @@ async def test_raises_invalid_email_for_malformed_email() -> None:
     use_case = RegisterCustomerUseCase(uow)
 
     with pytest.raises(InvalidEmailError) as exc_info:
-        await use_case.execute(RegisterCustomerCommand(email="not-an-email"))
+        await use_case.execute(RegisterCustomerCommand(email="not-an-email", password="s3cr3t"))
 
     assert exc_info.value.http_status == 422
     assert uow.committed is False
