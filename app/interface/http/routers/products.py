@@ -8,13 +8,16 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response
 
 from app.application.create_product import CreateProductCommand, CreateProductUseCase
+from app.application.get_product_detail import GetProductDetailQuery, GetProductDetailUseCase
 from app.application.list_products import ListProductsQuery, ListProductsUseCase
 from app.interface.http.dependencies import (
     get_create_product_use_case,
+    get_get_product_detail_use_case,
     get_list_products_use_case,
 )
 from app.interface.schemas.products import (
     CreateProductRequest,
+    ProductDetailResponse,
     ProductPageResponse,
     ProductResponse,
 )
@@ -78,6 +81,46 @@ async def list_products(
         total=product_page.total,
         page=product_page.page,
         size=product_page.size,
+    )
+
+
+@router.get(
+    "/{sku}",
+    status_code=200,
+    response_model=ProductDetailResponse,
+    responses={
+        404: {
+            "description": "No product with the given SKU exists.",
+            "content": {
+                "application/problem+json": {
+                    "example": {
+                        "type": "https://smart-store.example/problems/product-not-found",
+                        "title": "Product Not Found",
+                        "status": 404,
+                        "detail": "No product with SKU 'GHOST-01' exists.",
+                        "sku": "GHOST-01",
+                    }
+                }
+            },
+        }
+    },
+)
+async def get_product_detail(
+    sku: str,
+    use_case: GetProductDetailUseCase = get_get_product_detail_use_case,
+) -> ProductDetailResponse:
+    """Retrieve a product with its current available stock.
+
+    Returns 200 with the product and computed available quantity.
+    Returns 404 problem+json if no product with the given SKU exists.
+    """
+    detail = await use_case.execute(GetProductDetailQuery(sku=sku))
+    return ProductDetailResponse(
+        id=detail.id,
+        sku=detail.sku,
+        name=detail.name,
+        price=str(detail.price),
+        available=detail.available,
     )
 
 

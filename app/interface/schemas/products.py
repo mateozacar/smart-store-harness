@@ -35,6 +35,18 @@ class ProductResponse(BaseModel):
     price: str
 
 
+class ProductDetailResponse(BaseModel):
+    """Response body for GET /api/v1/products/{sku} — includes available stock."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    sku: str
+    name: str
+    price: str
+    available: int
+
+
 class ProductPageResponse(BaseModel):
     """Response body for paginated product listing."""
 

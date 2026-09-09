@@ -17,6 +17,14 @@ class SqlAlchemyInventoryRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def get(self, sku: SKU) -> InventoryLevel | None:
+        """Return the InventoryLevel for the given SKU without locking, or None if absent."""
+        stmt = select(InventoryRow).where(InventoryRow.sku == sku.value)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        if row is None:
+            return None
+        return InventoryLevel(sku=SKU(row.sku), on_hand=row.on_hand, reserved=row.reserved)
+
     async def get_for_update(self, sku: SKU) -> InventoryLevel:
         """Acquire a row-level lock and return the InventoryLevel for the given SKU.
 
