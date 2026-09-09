@@ -8,6 +8,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.create_product import CreateProductUseCase
+from app.application.get_product_detail import GetProductDetailUseCase
 from app.application.list_products import ListProductsUseCase
 from app.application.place_order import PlaceOrderUseCase
 from app.application.register_customer import RegisterCustomerUseCase
@@ -78,3 +79,15 @@ def _get_place_order_use_case(
 get_place_order_use_case: Annotated[PlaceOrderUseCase, Depends(_get_place_order_use_case)] = (
     Depends(_get_place_order_use_case)
 )
+
+
+def _get_get_product_detail_use_case(
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(_get_uow)],
+) -> GetProductDetailUseCase:
+    """Provide a GetProductDetailUseCase for the current request."""
+    return GetProductDetailUseCase(uow)
+
+
+get_get_product_detail_use_case: Annotated[
+    GetProductDetailUseCase, Depends(_get_get_product_detail_use_case)
+] = Depends(_get_get_product_detail_use_case)

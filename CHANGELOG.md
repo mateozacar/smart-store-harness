@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- feat: add GET /api/v1/products/{sku} — retrieve product detail with computed available stock (on_hand - reserved); returns 404 problem+json for unknown SKU; available defaults to 0 when no inventory row exists (#21)
 - feat: add POST /api/v1/orders — place an order with atomic inventory reservation (SELECT FOR UPDATE); optionally attach to a registered customer; returns 409 on insufficient stock, 422 on unknown customer_id (#19)
 - feat: add POST /api/v1/customers — register a customer with a unique, RFC 5322-validated email; normalizes to lowercase; returns 409 on duplicate email, 422 on malformed email (#17)
 - feat: scaffold hexagonal layout with FastAPI, SQLAlchemy, Alembic, testcontainers baseline (#1)

@@ -46,6 +46,17 @@ class InvalidPriceRangeError(DomainError):
         super().__init__("invalid-price-range", detail)
 
 
+class ProductNotFoundError(DomainError):
+    """Raised when a product with the given SKU does not exist."""
+
+    problem_type = "product-not-found"
+    http_status = 404
+
+    def __init__(self, sku: str) -> None:
+        super().__init__("product-not-found", f"No product with SKU '{sku}' exists.")
+        self.sku = sku
+
+
 class CustomerNotFoundError(DomainError):
     """Raised when a referenced customer_id does not exist."""
 

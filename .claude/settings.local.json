@@ -36,6 +36,8 @@
       "Bash(bash *)",
       "Bash(git push *)",
       "Skill(story)",
+      "Skill(build)",
+      "Skill(build-team)",
       "Bash(mkdir -p .claude/state)",
       "Bash(printf '%s\\\\n' \"19\")",
       "WebFetch(domain:www.anthropic.com)",
@@ -44,7 +46,26 @@
       "Bash(herdr worktree:*)",
       "Bash(herdr agent:*)",
       "Bash(echo need another method:*)",
-      "Bash(herdr pane:*)"
+      "Bash(herdr pane:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k in [''apiKeyHelper'',''env'',''model'']}, indent=2\\)\\)\")",
+      "Bash(env | grep -E \"ANTHROPIC|CLAUDE|CODEMIE|API_KEY|LITELLM\" | sed 's/=.*/=***/' 2>/dev/null)",
+      "Bash(herdr pane list 2>&1 | python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(p['pane_id'], p.get\\('agent_status'\\), p.get\\('terminal_title_stripped',''\\)\\) for p in d['result']['panes']]\" 2>/dev/null || herdr pane list 2>&1)",
+      "Bash(gh issue:*)",
+      "Bash(herdr --version)",
+      "Bash(herdr skills *)",
+      "Bash(herdr skill *)",
+      "Bash(herdr --help)",
+      "Bash(herdr integration *)",
+      "Bash(herdr --skill)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(npx skills *)",
+      "Bash(herdr tab *)",
+      "Bash(codemie-claude --version)",
+      "Bash(codemie-claude --help)",
+      "Bash(codemie-claude --print-config)",
+      "Bash(herdr workspace *)",
+      "Bash(docs/ARCHITECTURE_IMPROVEMENTS.md)",
+      "Bash(wait)"
     ]
   }
 }
