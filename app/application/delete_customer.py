@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.application.unit_of_work import UnitOfWork
-from app.domain.errors import CustomerHasActiveOrdersError, CustomerNotFoundError
+from app.domain.errors import CustomerDeleteNotFoundError, CustomerHasActiveOrdersError
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class DeleteCustomerCommand:
 class DeleteCustomerUseCase:
     """Orchestrates customer deletion within a unit of work.
 
-    Raises CustomerNotFoundError if the customer does not exist.
+    Raises CustomerDeleteNotFoundError if the customer does not exist.
     Raises CustomerHasActiveOrdersError if the customer has any PENDING or
     CONFIRMED orders, which would violate the referential integrity invariant
     stated in PRD §3.
@@ -32,7 +32,7 @@ class DeleteCustomerUseCase:
         async with self._uow:
             customer = await self._uow.customers.get_by_id(cmd.customer_id)
             if customer is None:
-                raise CustomerNotFoundError(cmd.customer_id)
+                raise CustomerDeleteNotFoundError(cmd.customer_id)
 
             has_active = await self._uow.orders.has_active_orders_for_customer(cmd.customer_id)
             if has_active:
