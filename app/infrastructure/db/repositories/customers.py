@@ -51,3 +51,10 @@ class SqlAlchemyCustomerRepository:
         if row is None:
             return None
         return Customer(id=row.id, email=Email(row.email))
+
+    async def delete(self, customer_id: str) -> None:
+        """Remove the customer row with the given id from the database."""
+        stmt = select(CustomerRow).where(CustomerRow.id == customer_id)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        if row is not None:
+            await self._session.delete(row)

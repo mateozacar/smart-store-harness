@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.orders.entities import Order
@@ -35,3 +36,15 @@ class SqlAlchemyOrderRepository:
             self._session.add(line_row)
 
         await self._session.flush()
+
+    async def has_active_orders_for_customer(self, customer_id: str) -> bool:
+        """Return True if the customer has any PENDING or CONFIRMED orders."""
+        _active_statuses = ("PENDING", "CONFIRMED")
+        stmt = select(
+            exists().where(
+                OrderRow.customer_id == customer_id,
+                OrderRow.status.in_(_active_statuses),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return bool(result.scalar())

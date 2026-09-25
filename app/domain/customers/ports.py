@@ -15,3 +15,5 @@ class CustomerRepository(Protocol):
     async def get_by_email(self, email: Email) -> Customer | None: ...  # pragma: no cover
 
     async def get_by_id(self, customer_id: str) -> Customer | None: ...  # pragma: no cover
+
+    async def delete(self, customer_id: str) -> None: ...  # pragma: no cover

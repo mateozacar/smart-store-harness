@@ -50,11 +50,25 @@ class CustomerNotFoundError(DomainError):
     """Raised when a referenced customer_id does not exist."""
 
     problem_type = "customer-not-found"
-    http_status = 422
+    http_status = 404
 
     def __init__(self, customer_id: str) -> None:
         super().__init__(
             "customer-not-found",
             f"Customer with id '{customer_id}' does not exist.",
+        )
+        self.customer_id = customer_id
+
+
+class CustomerHasActiveOrdersError(DomainError):
+    """Raised when attempting to delete a customer who has PENDING or CONFIRMED orders."""
+
+    problem_type = "customer-has-active-orders"
+    http_status = 409
+
+    def __init__(self, customer_id: str) -> None:
+        super().__init__(
+            "customer-has-active-orders",
+            f"Customer '{customer_id}' has active orders and cannot be deleted.",
         )
         self.customer_id = customer_id
