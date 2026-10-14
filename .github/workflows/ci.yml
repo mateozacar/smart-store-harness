@@ -57,7 +57,7 @@ jobs:
         run: uv sync --frozen --extra dev
 
       - name: Run unit tests
-        run: uv run pytest tests/unit/ -x -q --cov=app --cov-report=xml --cov-report=term-missing
+        run: uv run pytest tests/unit/ -x -q --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=0
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

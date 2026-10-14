@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Response
 
+from app.application.delete_customer import DeleteCustomerCommand, DeleteCustomerUseCase
 from app.application.register_customer import RegisterCustomerCommand, RegisterCustomerUseCase
-from app.interface.http.dependencies import get_register_customer_use_case
+from app.interface.http.dependencies import (
+    get_delete_customer_use_case,
+    get_register_customer_use_case,
+)
 from app.interface.schemas.customers import CustomerResponse, RegisterCustomerRequest
 
 router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
@@ -58,3 +62,49 @@ async def register_customer(
     customer = await use_case.execute(RegisterCustomerCommand(email=body.email))
     response.headers["Location"] = f"/api/v1/customers/{customer.id}"
     return CustomerResponse(id=customer.id, email=customer.email.value)
+
+
+@router.delete(
+    "/{customer_id}",
+    status_code=204,
+    responses={
+        404: {
+            "description": "No customer with the given id exists.",
+            "content": {
+                "application/problem+json": {
+                    "example": {
+                        "type": "https://smart-store.example/problems/customer-not-found",
+                        "title": "Customer Not Found",
+                        "status": 404,
+                        "detail": "Customer with id 'uuid-99' does not exist.",
+                    }
+                }
+            },
+        },
+        409: {
+            "description": "Customer has active (PENDING or CONFIRMED) orders.",
+            "content": {
+                "application/problem+json": {
+                    "example": {
+                        "type": "https://smart-store.example/problems/customer-has-active-orders",
+                        "title": "Customer Has Active Orders",
+                        "status": 409,
+                        "detail": "Customer 'uuid-2' has active orders and cannot be deleted.",
+                    }
+                }
+            },
+        },
+    },
+)
+async def delete_customer(
+    customer_id: str,
+    use_case: DeleteCustomerUseCase = get_delete_customer_use_case,
+) -> Response:
+    """Delete a customer by id.
+
+    Returns 204 on success.
+    Returns 404 if no customer with the given id exists.
+    Returns 409 if the customer has at least one PENDING or CONFIRMED order.
+    """
+    await use_case.execute(DeleteCustomerCommand(customer_id=customer_id))
+    return Response(status_code=204)

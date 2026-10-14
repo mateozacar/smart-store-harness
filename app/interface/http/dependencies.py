@@ -8,6 +8,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.create_product import CreateProductUseCase
+from app.application.delete_customer import DeleteCustomerUseCase
 from app.application.list_products import ListProductsUseCase
 from app.application.place_order import PlaceOrderUseCase
 from app.application.register_customer import RegisterCustomerUseCase
@@ -66,6 +67,18 @@ get_list_products_use_case: Annotated[ListProductsUseCase, Depends(_get_list_pro
 get_register_customer_use_case: Annotated[
     RegisterCustomerUseCase, Depends(_get_register_customer_use_case)
 ] = Depends(_get_register_customer_use_case)
+
+
+def _get_delete_customer_use_case(
+    uow: Annotated[SqlAlchemyUnitOfWork, Depends(_get_uow)],
+) -> DeleteCustomerUseCase:
+    """Provide a DeleteCustomerUseCase for the current request."""
+    return DeleteCustomerUseCase(uow)
+
+
+get_delete_customer_use_case: Annotated[
+    DeleteCustomerUseCase, Depends(_get_delete_customer_use_case)
+] = Depends(_get_delete_customer_use_case)
 
 
 def _get_place_order_use_case(

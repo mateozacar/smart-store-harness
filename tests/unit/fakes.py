@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.domain.customers.entities import Customer, Email, EmailConflictError
 from app.domain.errors import DomainError
 from app.domain.inventory.entities import InventoryLevel
-from app.domain.orders.entities import Order
+from app.domain.orders.entities import Order, OrderStatus
 from app.domain.products.entities import SKU
 
 
@@ -33,11 +33,19 @@ class FakeInventoryRepository:
 class FakeOrderRepository:
     """In-memory order repository for unit testing."""
 
-    def __init__(self) -> None:
-        self.saved: list[Order] = []
+    def __init__(self, orders: list[Order] | None = None) -> None:
+        self.saved: list[Order] = list(orders) if orders else []
 
     async def add(self, order: Order) -> None:
         self.saved.append(order)
+
+    async def has_active_orders_for_customer(self, customer_id: str) -> bool:
+        """Return True if any saved order for this customer is PENDING or CONFIRMED."""
+        return any(
+            o.customer_id == customer_id
+            and o.status in (OrderStatus.PENDING, OrderStatus.CONFIRMED)
+            for o in self.saved
+        )
 
 
 class FakeCustomerRepository:
@@ -63,6 +71,11 @@ class FakeCustomerRepository:
 
     async def get_by_id(self, customer_id: str) -> Customer | None:
         return self._by_id.get(customer_id)
+
+    async def delete(self, customer_id: str) -> None:
+        customer = self._by_id.pop(customer_id, None)
+        if customer is not None:
+            self._by_email.pop(customer.email.value, None)
 
 
 class FakeUnitOfWork:
